@@ -1,0 +1,56 @@
+apply plugin: 'com.android.model.application'
+
+model {
+    repositories {
+        libs(PrebuiltLibraries) {
+            libracket3m {
+                binaries.withType(StaticLibraryBinary) {
+                    staticLibraryFile = file("src/main/jni/racket/libracket3m.a")
+                }
+            }
+        }
+    }
+
+    android {
+        compileSdkVersion = 23
+        buildToolsVersion = '23.0.2'
+        
+        defaultConfig {
+            applicationId = 'org.racketlang.android.project'
+            minSdkVersion.apiLevel = 4
+            targetSdkVersion.apiLevel = 23
+        }
+
+        sources {
+            main {
+                jni {
+                    source {
+                        srcDir "src/main/jni"
+                        exclude "racket/racket_app.c"
+                    }
+                    dependencies {
+                        library "libracket3m" linkage "static"
+                    }
+                }
+            }
+        }
+
+        ndk {
+            moduleName = 'racket-android-project'
+            toolchain = 'clang'
+            CFlags.addAll(['-Wall'])
+            ldLibs.addAll(['log','GLESv3', 'EGL'])
+        }
+        buildTypes {
+            release {
+                minifyEnabled = false
+                proguardFiles.add(file('proguard-rules.txt'))
+            }
+        }
+        productFlavors {
+            create("arm") {
+                ndk.abiFilters.add("armeabi")
+            }
+        }
+    }
+}
