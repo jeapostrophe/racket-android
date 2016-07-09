@@ -8,16 +8,6 @@ model {
                     staticLibraryFile = file("src/main/jni/racket/libracket3m.a")
                 }
             }
-            libracket {
-                binaries.withType(StaticLibraryBinary) {
-                    staticLibraryFile = file("src/main/jni/racket/libracket.a")
-                }
-            }
-            libmzgc {
-                binaries.withType(StaticLibraryBinary) {
-                    staticLibraryFile = file("src/main/jni/racket/libmzgc.a")
-                }
-            }
         }
     }
 
@@ -39,12 +29,7 @@ model {
                         exclude "racket/racket_app.c"
                     }
                     dependencies {
-                        // 3m
                         library "libracket3m" linkage "static"
-                        // CGC
-                        //library "libracket" linkage "static"
-                        //library "libmzgc" linkage "static"
-                        
                     }
                 }
             }
