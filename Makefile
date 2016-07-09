@@ -13,6 +13,10 @@ RACKETINCLUDE=${RACKETDIR}/include
 JNI=project/app/src/main/jni
 RACKETDEST=${JNI}/racket
 
+.PHONY: app
+app: build_all
+	cd project && ./gradlew installArmDebug
+
 .PHONY: build_all
 build_all: ${RACKETDEST}/racket_app.c ${RACKETDEST}/libracket3m.a ${RACKETDEST}/include
 
