@@ -18,13 +18,20 @@ app: build_all
 	cd project && ./gradlew installArmDebug
 
 .PHONY: build_all
-build_all: ${RACKETDEST}/racket_app.c ${RACKETDEST}/libracket3m.a ${RACKETDEST}/include
+build_all: ${RACKETDEST}/racket-vm.3m.c ${RACKETDEST}/racket_app.c ${RACKETDEST}/libracket3m.a ${RACKETDEST}/include
 
 clean:
-	rm -f ${RACKETDEST}/racket_app.c
+	rm -f ${RACKETDEST}/racket_app.c ${RACKETDEST}/racket-vm.3m.c
+
+size: ${RACKETDEST}/racket_app.c
+	du -hac $^
 
 ${RACKETDEST}/racket_app.c: rkt/app.rkt ${RACKETDEST}
 	raco ctool --c-mods $@ $<
+
+${RACKETDEST}/racket-vm.3m.c: ${RACKETDEST}/../racket-vm.c ${RACKETDEST}
+	raco ctool --xform $<
+	mv -f ${RACKETDEST}/../racket-vm.3m.c ${RACKETDEST}/racket-vm.3m.c
 
 ${RACKETDEST}/libracket3m.a: ${LIBRACKET}
 	cp $< $@
