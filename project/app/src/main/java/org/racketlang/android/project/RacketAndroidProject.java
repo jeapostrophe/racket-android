@@ -28,7 +28,6 @@ import javax.microedition.khronos.opengles.GL10;
 class RLib {
     public static native void onDrawFrame();
     public static native void onSurfaceChanged(int w, int h);
-    public static native void onSurfaceCreated();
     public static native void onCreate( RAPAudio rs );
     public static native boolean onTouchEvent(int a, float x, float y);
 
@@ -60,7 +59,8 @@ class RAPView extends GLSurfaceView {
         }
 
         public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-            RLib.onSurfaceCreated();
+            // XXX I may need to bring this back for when we start app
+            // again
         }
     }
 }

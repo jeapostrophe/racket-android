@@ -13,6 +13,7 @@
 
 #include <EGL/egl.h>
 
+#define MZ_PRECISE_GC
 #include "racket/include/scheme.h"
 #include "racket/include/schemegc2.h"
 #include "racket/racket_app.c"
@@ -25,6 +26,8 @@ void rap_scheme_console_output( const char *disp, intptr_t len ) {
 
 void rap_scheme_exit( int code ) {
   ALOGE("Racket tried to exit with %d\n", code);
+  // XXX Really stop?
+  // pthread_exit(NULL);
 }
 
 static const char *RAP_STDOUT = "stdout";
@@ -56,8 +59,7 @@ int main_t_fd[2];
 
 #define RAP_onDrawFrame 0
 #define RAP_onSurfaceChanged 1
-#define RAP_onSurfaceCreated 2
-#define RAP_onTouchEvent 3
+#define RAP_onTouchEvent 2
 
 struct rvm_api_t {
   uint32_t call;
@@ -94,18 +96,10 @@ Scheme_Object *rap_set_label(int argc, Scheme_Object **argv) {
   return NULL;
 }
 
-EGLDisplay the_egl_dpy = EGL_NO_DISPLAY;
-EGLSurface the_egl_draw = EGL_NO_SURFACE;
-EGLSurface the_egl_read = EGL_NO_SURFACE;
-EGLContext the_egl_ctx = EGL_NO_CONTEXT;
-Scheme_Object *rap_set_gl_context(int argc, Scheme_Object **argv) {
-  ALOGE("Making Racket thread in charge of EGL");
-  EGLBoolean r =
-    eglMakeCurrent( the_egl_dpy, the_egl_draw, the_egl_read, the_egl_ctx );
-  ALOGE("Done - Making Racket thread in charge of EGL");
-  if ( r == EGL_FALSE ) {
-    ALOGE("Error in eglMakeCurrent");
-  }
+volatile char global_draw_frame_done = 0;
+
+Scheme_Object *rap_draw_frame_done(int argc, Scheme_Object **argv) {
+  global_draw_frame_done = 1;
   return NULL;
 }
 
@@ -136,7 +130,11 @@ Java_org_racketlang_android_project_RLib_onDrawFrame(
  JNIEnv* env,
  jobject thiz ) {
   struct rvm_api_t rpc = { .call = RAP_onDrawFrame };
-  return send_to_racket( rpc );
+  global_draw_frame_done = 0;
+  send_to_racket( rpc );
+  while ( !global_draw_frame_done )
+    scheme_check_foreign_work();
+  return;
 }
 
 void
@@ -147,25 +145,6 @@ Java_org_racketlang_android_project_RLib_onSurfaceChanged(
  jint h ) {
   struct rvm_api_t rpc = { .call = RAP_onSurfaceChanged,
                            .args = { {.i = w}, {.i = h} } };
-  return send_to_racket( rpc );
-}
-
-void
-Java_org_racketlang_android_project_RLib_onSurfaceCreated(
- JNIEnv* env,
- jobject thiz ) {  
-  struct rvm_api_t rpc = { .call = RAP_onSurfaceCreated };
-  the_egl_dpy = eglGetCurrentDisplay();
-  the_egl_draw = eglGetCurrentSurface(EGL_DRAW);
-  the_egl_read = eglGetCurrentSurface(EGL_READ);
-  the_egl_ctx = eglGetCurrentContext();
-  ALOGE("Turning off EGL context for Java");
-  EGLBoolean r =
-    eglMakeCurrent(the_egl_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-  ALOGE("Done - Turning off EGL context for Java");
-  if ( r == EGL_FALSE ) {
-    ALOGE("Error in eglMakeCurrent");
-  }
   return send_to_racket( rpc );
 }
 

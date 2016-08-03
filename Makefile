@@ -40,14 +40,14 @@ ${RACKETDEST}/libracket3m.a: ${LIBRACKET}
 	cp $< $@
 
 ${RACKETDEST}/include: ${RACKETINCLUDE}
-	cp -r $< $@
+	rsync -a --delete --progress $</ $@/
 
 ${RACKETDEST}:
 	mkdir -p $@
 	touch $@
 
 ${RACKETINCLUDE} ${LIBRACKET}: dist/racket-master
-	mkdir -p ${RACKETDIR}/src/build && cd ${RACKETDIR}/src//build && ../configure --host=${TARGET} --enable-sysroot="${NDK}/platforms/android-${ANDROID_VER}/arch-arm" --enable-racket=auto && $(MAKE) && $(MAKE) plain-install
+	mkdir -p ${RACKETDIR}/src/build && cd ${RACKETDIR}/src//build && ../configure --host=${TARGET} --enable-sysroot="${NDK}/platforms/android-${ANDROID_VER}/arch-arm" --enable-racket=auto --enable-places --enable-foreign && $(MAKE) && $(MAKE) plain-install
 
 dist/racket-master: dist/racket-master.zip
 	unzip $^ -d dist

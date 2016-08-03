@@ -57,7 +57,7 @@ static int rvm_init(void *d) {
   SCHEME_VEC_ELS(vec)[0] = v;
   v = scheme_make_prim_w_arity(rap_set_label, "RAPSetLabel", 1, 1);
   SCHEME_VEC_ELS(vec)[1] = v;
-  v = scheme_make_prim_w_arity(rap_set_gl_context, "RAPSetGLContext", 0, 0);
+  v = scheme_make_prim_w_arity(rap_draw_frame_done, "RAPDrawFrameDone", 0, 0);
   SCHEME_VEC_ELS(vec)[2] = v;
   v = scheme_apply(ra, 3, a);
   
