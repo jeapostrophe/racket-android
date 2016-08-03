@@ -11,6 +11,8 @@
 #define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 #define ALOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
+#include <EGL/egl.h>
+
 #include "racket/include/scheme.h"
 #include "racket/include/schemegc2.h"
 #include "racket/racket_app.c"
@@ -87,6 +89,26 @@ Scheme_Object *rap_audio(int argc, Scheme_Object **argv) {
   return NULL;
 }
 
+Scheme_Object *rap_set_label(int argc, Scheme_Object **argv) {
+  // XXX Do something
+  return NULL;
+}
+
+EGLDisplay the_egl_dpy = EGL_NO_DISPLAY;
+EGLSurface the_egl_draw = EGL_NO_SURFACE;
+EGLSurface the_egl_read = EGL_NO_SURFACE;
+EGLContext the_egl_ctx = EGL_NO_CONTEXT;
+Scheme_Object *rap_set_gl_context(int argc, Scheme_Object **argv) {
+  ALOGE("Making Racket thread in charge of EGL");
+  EGLBoolean r =
+    eglMakeCurrent( the_egl_dpy, the_egl_draw, the_egl_read, the_egl_ctx );
+  ALOGE("Done - Making Racket thread in charge of EGL");
+  if ( r == EGL_FALSE ) {
+    ALOGE("Error in eglMakeCurrent");
+  }
+  return NULL;
+}
+
 #include "racket/racket-vm.3m.c"
 
 Scheme_Object *rap_scheme_make_stdout() {
@@ -133,8 +155,18 @@ Java_org_racketlang_android_project_RLib_onSurfaceCreated(
  JNIEnv* env,
  jobject thiz ) {  
   struct rvm_api_t rpc = { .call = RAP_onSurfaceCreated };
+  the_egl_dpy = eglGetCurrentDisplay();
+  the_egl_draw = eglGetCurrentSurface(EGL_DRAW);
+  the_egl_read = eglGetCurrentSurface(EGL_READ);
+  the_egl_ctx = eglGetCurrentContext();
+  ALOGE("Turning off EGL context for Java");
+  EGLBoolean r =
+    eglMakeCurrent(the_egl_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+  ALOGE("Done - Turning off EGL context for Java");
+  if ( r == EGL_FALSE ) {
+    ALOGE("Error in eglMakeCurrent");
+  }
   return send_to_racket( rpc );
-  return;
 }
 
 void

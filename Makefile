@@ -26,7 +26,10 @@ clean:
 size: ${RACKETDEST}/racket_app.c
 	du -hac $^
 
-${RACKETDEST}/racket_app.c: rkt/app.rkt ${RACKETDEST}
+rkt/csd.rktd.gz: rkt/app-csd.rkt
+	racket -t $^
+
+${RACKETDEST}/racket_app.c: rkt/app.rkt rkt/csd.rktd.gz ${RACKETDEST}
 	raco ctool --c-mods $@ $<
 
 ${RACKETDEST}/racket-vm.3m.c: ${RACKETDEST}/../racket-vm.c ${RACKETDEST}

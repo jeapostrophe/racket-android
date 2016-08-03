@@ -21,7 +21,8 @@ Scheme_Object *rap_scheme_make_stdio(const char *label) {
 
 static int rvm_init(void *d) {
   Scheme_Env *e = NULL;
-  Scheme_Object *mp = NULL, *ra = NULL, *v = NULL, *a[3] = {NULL, NULL, NULL};
+  Scheme_Object *a[3] = {NULL, NULL, NULL};
+  Scheme_Object *mp = NULL, *ra = NULL, *v = NULL, *vec = NULL;
   Scheme_Config *config = NULL;
   Scheme_Object *curout = NULL;
 
@@ -49,7 +50,15 @@ static int rvm_init(void *d) {
   v = scheme_intern_symbol("main-t-in");
   a[0] = scheme_make_fd_input_port(main_t_fd[0], v, 0, 0);
   a[1] = scheme_make_integer(sizeof(struct rvm_api_t));
-  a[2] = scheme_make_prim_w_arity(rap_audio, "RAPAudio.playSound", 1, 1);
+  v = scheme_make_null();
+  vec = scheme_make_vector(3, v);
+  a[2] = vec;
+  v = scheme_make_prim_w_arity(rap_audio, "RAPAudio.playSound", 1, 1);
+  SCHEME_VEC_ELS(vec)[0] = v;
+  v = scheme_make_prim_w_arity(rap_set_label, "RAPSetLabel", 1, 1);
+  SCHEME_VEC_ELS(vec)[1] = v;
+  v = scheme_make_prim_w_arity(rap_set_gl_context, "RAPSetGLContext", 0, 0);
+  SCHEME_VEC_ELS(vec)[2] = v;
   v = scheme_apply(ra, 3, a);
   
   return 0;
