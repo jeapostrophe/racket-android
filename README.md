@@ -28,4 +28,5 @@ permissions) or `project/app/src/main/res` (for icons.)
 
 = TODO
 * Make 'raco ctool' use gzip for the zo to decrease app size.
-
+* Desktop simulation of touch interface
+* Paste-board like: snip, drag-n-drog object, picts

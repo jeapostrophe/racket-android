@@ -6,6 +6,7 @@
          mode-lambda
          lux
          "tablet.rkt"
+         #;"tablet-on-desktop.rkt"
          "pixel-c.rkt")
 
 (define-app ([W PIXEL-W] [H PIXEL-H])
