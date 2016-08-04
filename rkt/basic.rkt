@@ -47,7 +47,8 @@
 (define (make-touch #:platform platform)
   (define video-b (box void))
   (define event-ch (make-async-channel))
-  (define fake-dc
+  (define the-fake-dc #f)
+  (define (make-fake-dc)
     (let ()
       (local-require racket/class)
       (define fake-glctx
@@ -79,11 +80,13 @@
   (define (receive-rpc! r)
     (match r
       ['onDrawFrame
-       ((unbox video-b) current-w current-h fake-dc)
+       ((unbox video-b) current-w current-h the-fake-dc)
        (platform-draw-frame-done! platform)]
       [(vector 'onSurfaceChanged w h)
        (set! current-w w)
        (set! current-h h)]
+      ['onSurfaceCreated
+       (set! the-fake-dc (make-fake-dc))]
       [(vector 'onTouchEvent 0 x y)
        (set! last-click-t (current-inexact-milliseconds))
        (set! last-click-x x)
@@ -208,6 +211,8 @@
     [1
      (vector 'onSurfaceChanged (ib->i b 4) (ib->i b 8))]
     [2
+     'onSurfaceCreated]
+    [3
      (vector 'onTouchEvent (ib->i b 4) (fb->r b 8) (fb->r b 12))]))
 
 (define ((make-run-app make-rpc!) in rpc-size platform)

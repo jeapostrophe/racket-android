@@ -59,7 +59,8 @@ int main_t_fd[2];
 
 #define RAP_onDrawFrame 0
 #define RAP_onSurfaceChanged 1
-#define RAP_onTouchEvent 2
+#define RAP_onSurfaceCreated 2
+#define RAP_onTouchEvent 3
 
 struct rvm_api_t {
   uint32_t call;
@@ -145,6 +146,15 @@ Java_org_racketlang_android_project_RLib_onSurfaceChanged(
  jint h ) {
   struct rvm_api_t rpc = { .call = RAP_onSurfaceChanged,
                            .args = { {.i = w}, {.i = h} } };
+  return send_to_racket( rpc );
+}
+
+void
+Java_org_racketlang_android_project_RLib_onSurfaceCreated(
+ JNIEnv* env,
+ jobject thiz ) {
+  struct rvm_api_t rpc = { .call = RAP_onSurfaceCreated,
+                           .args = { } };
   return send_to_racket( rpc );
 }
 
