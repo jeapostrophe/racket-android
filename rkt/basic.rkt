@@ -11,6 +11,8 @@
          lux
          lux/chaos)
 
+;; XXX Cleanup
+
 (define (flsqr x)
   (fl* x x))
 (define (fldist x1 x2 y1 y2)
@@ -20,6 +22,7 @@
 
 (set-gl-procedure-loader!
  (load-get-proc-address (ffi-lib #f) '()))
+(gl-backend-version 'es3.2)
 
 (struct touch-chaos (event-ch video-b label!)
   #:methods gen:chaos
@@ -122,7 +125,7 @@
 (define (make-app
          #:play-sound! play-sound!)
   (define W 2560)
-  (define H 1512)
+  (define H 1688)
   
   (define fish-idx (sprite-idx csd 'fish))
   (define fish-m 3.0)

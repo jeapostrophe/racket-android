@@ -29,4 +29,4 @@ permissions) or `project/app/src/main/res` (for icons.)
 
 = TODO
 * Make 'raco ctool' use gzip for the zo to decrease app size.
-* Make `ffi-poll.patch` correspond to `--enable-ffipoll`
+
