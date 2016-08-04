@@ -4,10 +4,9 @@ This project was funded by Black Swan Learning LLC.
 
 = USAGE
 
-Put the program that you want to run in `rkt/app.rkt`. Right now, this
-must export a function `go` that returns a string, but in the future
-it will export a few functions related to interaction with the Android
-UI.
+Put the program that you want to run in `rkt/app.rkt`. Look at
+`rkt/basic.rkt` for an example application. You must have the Racket
+packages, `lux`, `opengl`, and `mode-lambda` installed.
 
 Ensure that you have the Android SDK (with NDK) installed in
 `~/Library/Android/sdk` (the default location that Android Studio puts
