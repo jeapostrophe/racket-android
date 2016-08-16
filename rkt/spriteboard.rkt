@@ -13,25 +13,57 @@
    (fl+ (flsqr (fl- x1 x2))
         (flsqr (fl- y1 y2)))))
 
-(struct *obj (m-spr click! alive?))
-(define (object-spr o)
-  (define m (*obj-m-spr o))
-  (if (procedure? m)
-      (m)
-      m))
-(define (object-click! o)
-  ((*obj-click! o)))
+(struct clickable (m-spr click! drag-drop! alive?))
+(define (click-click! o)
+  ((clickable-click! o)))
+
+(struct draggable ([x #:mutable] [y #:mutable] f-spr
+                   drag-start! drag-stop!
+                   drag-drop-v drag-drop!
+                   alive?))
+(define (drag-update-pos! m x y)
+  (set-draggable-x! m x)
+  (set-draggable-y! m y))
+(define (drag-start! m)
+  ((draggable-drag-start! m)))
+(define (drag-stop! m)
+  ((draggable-drag-stop! m)))
+(define (drag-value m)
+  ((draggable-drag-drop-v m)))
+
+(define (object-drop! o v)
+  (match o
+    [(? clickable?)
+     ((clickable-drag-drop! o) v)]
+    [(? draggable?)
+     ((draggable-drag-drop! o) v)]))
+(define (object-spr dragged? o)
+  (match o
+    [(? clickable?)
+     (define m (clickable-m-spr o))
+     (if (procedure? m)
+         (m)
+         m)]
+    [(? draggable?)
+     ((draggable-f-spr o)
+      dragged?
+      (draggable-x o)
+      (draggable-y o))]))
 (define (object-alive? o)
-  ((*obj-alive? o)))
+  (match o
+    [(? clickable?)
+     ((clickable-alive? o))]
+    [(? draggable?)
+     ((draggable-alive? o))]))
 
 (struct spriteboard (metatree meta->tree) #:mutable)
 (define (make-the-spriteboard)
   (spriteboard null (make-hasheq)))
-(define (spriteboard-tree sb)
+(define (spriteboard-tree dragged-m sb)
   (match-define (spriteboard mt m->t) sb)
   (hash-clear! m->t)
   (for/list ([m (in-list mt)])
-    (define t (object-spr m))
+    (define t (object-spr (eq? dragged-m m) m))
     (hash-set! m->t m t)
     t))
 (define (spriteboard-gc! sb)
@@ -44,19 +76,41 @@
          (cons m mt)
          mt))))
 
-(define (spriteboard-new! sb
-                          #:sprite m-spr
-                          #:click! [click! void]
-                          #:alive? [alive? (λ () #t)])
+(define (spriteboard-add! sb o)
   (set-spriteboard-metatree!
+   sb (cons o (spriteboard-metatree sb)))
+  (spriteboard-gc! sb))
+
+(define (spriteboard-clickable!
+         sb
+         #:sprite m-spr
+         #:click! [click! void]
+         #:drag-drop! [drag-drop! void]
+         #:alive? [alive? (λ () #t)])
+  (spriteboard-add!
    sb
-   (cons
-    (*obj m-spr click! alive?)
-    (spriteboard-metatree sb))))
+   (clickable m-spr click! drag-drop! alive?)))
+
+(define (spriteboard-draggable!
+         sb
+         #:init-x init-x
+         #:init-y init-y
+         #:sprite f-spr
+         #:drag-start! [drag-start! void]
+         #:drag-stop! [drag-stop! void]
+         #:drag-drop-v [drag-drop-v void]
+         #:drag-drop! [drag-drop! void]
+         #:alive? [alive? (λ () #t)])
+  (spriteboard-add!
+   sb
+   (draggable init-x init-y f-spr
+              drag-start! drag-stop!
+              drag-drop-v drag-drop!
+              alive?)))
 
 (define (sprite-inside? csd t x y)
   (define t-idx (sprite-data-spr t))
-  
+
   (define tcx (sprite-data-dx t))
   (define sw (fx->fl (sprite-width csd t-idx)))
   (define tw (fl* (sprite-data-mx t) sw))
@@ -70,7 +124,7 @@
   (define thh (fl/ th 2.0))
   (define y-min (fl- tcy thh))
   (define y-max (fl+ tcy thh))
-  
+
   (and (fl<= x-min x)
        (fl<= x x-max)
        (fl<= y-min y)
@@ -82,41 +136,73 @@
             (layer (fx->fl (/ W 2)) (fx->fl (/ H 2)))
             #f #f #f #f #f #f))
   (define the-sb (make-the-spriteboard))
+  (define dragged-m #f)
+
+  (define (find-object not-o x y)
+    (define m->t (spriteboard-meta->tree the-sb))
+    (for/or ([m (in-list (spriteboard-metatree the-sb))]
+             #:unless not-o)
+      (define t (hash-ref m->t m #f))
+      (and t
+           (sprite-inside? csd t x y)
+           m)))
+
   (struct app ()
     #:methods gen:word
     [(define (word-fps w) 30.0)
      (define (word-label w ft)
        (lux-standard-label "Spriteboard" ft))
      (define (word-output w)
-       (render layer-c '() (spriteboard-tree the-sb)))
+       (render layer-c '() (spriteboard-tree dragged-m the-sb)))
      (define (word-event w e)
        (match e
          [(vector 'down x y)
-          (define m->t (spriteboard-meta->tree the-sb))
-          (let/ec esc
-            (for ([m (in-list (spriteboard-metatree the-sb))])
-              (define t (hash-ref m->t m #f))
-              (when (and t
-                         (sprite-inside? csd t x y))
-                (object-click! m)
-                (esc))))]
+          (define target-m (find-object #f x y))
+          (when target-m
+            (cond
+              [(clickable? target-m)
+               (click-click! target-m)]
+              [(draggable? target-m)
+               (set! dragged-m target-m)
+               (drag-update-pos! dragged-m x y)
+               (drag-start! dragged-m)]))]
          [(vector 'drag x y)
-          (printf "XXX implement drag movement\n")]
+          (when dragged-m
+            (drag-update-pos! dragged-m x y))]
          [(vector 'up x y)
-          (printf "XXX implement dropping\n")])
+          (when dragged-m
+            (drag-update-pos! dragged-m x y)
+            (define target-m
+              (find-object dragged-m x y))
+            (when target-m
+              (object-drop! target-m (drag-value dragged-m)))
+            (drag-stop! dragged-m)
+            (set! dragged-m #f))])
+       (spriteboard-gc! the-sb)
        w)
      (define (word-tick w)
-       (spriteboard-gc! the-sb)
        w)])
   (initialize! the-sb)
   (app))
 
 (provide
  (contract-out
-  [spriteboard-new!
+  [spriteboard-clickable!
    (->* (spriteboard?
          #:sprite (or/c sprite-data? (-> sprite-data?)))
         (#:click! (-> void?)
+         #:drag-drop! (-> any/c void?)
+         #:alive? (-> boolean?))
+        void?)]
+  [spriteboard-draggable!
+   (->* (spriteboard?
+         #:init-x flonum?
+         #:init-y flonum?
+         #:sprite (-> boolean? flonum? flonum? sprite-data?))
+        (#:drag-start! (-> void?)
+         #:drag-stop! (-> void?)
+         #:drag-drop-v (-> any/c)
+         #:drag-drop! (-> any/c void?)
          #:alive? (-> boolean?))
         void?)]
   [make-spriteboard

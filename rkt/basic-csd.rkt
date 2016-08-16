@@ -6,6 +6,12 @@
 (add-sprite!/value
  sd 'fish
  (standard-fish 50 50))
+(add-sprite!/value
+ sd 'cloud
+ (cloud 50 50))
+(add-sprite!/value
+ sd 'jack
+ (jack-o-lantern 50))
 (define static-csd
   (compile-sprite-db sd))
 
