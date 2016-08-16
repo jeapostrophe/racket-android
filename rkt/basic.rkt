@@ -5,65 +5,46 @@
          racket/match
          mode-lambda
          lux
+         "spriteboard.rkt"
+         "pixel-c.rkt"
+         
          #;"tablet.rkt"
-         "simulator.rkt"
-         "pixel-c.rkt")
-
-(define (flsqr x)
-  (fl* x x))
-(define (fldist x1 x2 y1 y2)
-  (flsqrt
-   (fl+ (flsqr (fl- x1 x2))
-        (flsqr (fl- y1 y2)))))
+         "simulator.rkt")
 
 (define-app ([W PIXEL-W] [H PIXEL-H])
-  (define fish-idx (sprite-idx csd 'fish))
-  (define fish-m 4.0)
-  (define fish-x (fl/ (fx->fl W) 2.0))
-  (define fish-y (fl/ (fx->fl H) 2.0))
-  (struct app
-    (spin?)
-    #:methods gen:word
-    [(define (word-fps w) 30.0)
-     (define (word-label w ft)
-       (lux-standard-label "App" ft))
-     (define (word-output w)
-       (define cur-theta
-         (if (app-spin? w)
-             (fl* (fl/
-                   (fx->fl
-                    (fxmodulo (fxquotient
-                               (current-milliseconds)
-                               10)
-                              360))
-                   360.0)
-                  (fl* 2.0 pi))
-             0.0))
-       (render
-        (vector (layer (fx->fl (/ W 2)) (fx->fl (/ H 2)))
-                #f #f #f #f #f #f #f)
-        '()
-        (sprite fish-x fish-y fish-idx
-                #:mx fish-m
-                #:my fish-m
-                #:theta cur-theta)))
-     (define (word-event w e)
-       (match e
-         [(vector 'down x y)
-          (cond
-            [(fl< (fldist x fish-x y fish-y)
-                  (fl* fish-m
-                       (flmax (fx->fl (sprite-height csd fish-idx))
-                              (fx->fl (sprite-width csd fish-idx)))))
-             (play-sound! #"sample.m4a")
-             (struct-copy app w
-                          [spin? (not (app-spin? w))])]
-            [else
-             (printf "click ignored: ~v\n" e)
-             w])]
-         [_
-          (printf "event ignored: ~v\n" e)
-          w]))
-     (define (word-tick w)
-       w)])
-  (app #f))
+  (define (initialize! sb)
+    (define (make-a-fish! x y)
+      (define fish-spin? #f)
+      (spriteboard-new!
+       sb
+       #:click!
+       (λ ()
+         (play-sound! #"sample.m4a")
+         (cond
+           [fish-spin?
+            (set! fish-spin? #f)]
+           [else
+            (set! fish-spin? (current-milliseconds))]))
+       #:sprite
+       (λ ()
+         (sprite x y
+                 (sprite-idx csd 'fish)
+                 #:m 4.0
+                 #:theta
+                 (if fish-spin?
+                     (fl* (fl/
+                           (fx->fl
+                            (fxmodulo (fxquotient
+                                       (- (current-milliseconds) fish-spin?)
+                                       10)
+                                      360))
+                           360.0)
+                          (fl* 2.0 pi))
+                     0.0)))))
+    
+    (define N 6)
+    (for* ([x (in-range N)]
+           [y (in-range N)])
+      (make-a-fish! (fl* (fl/ (fl+ 0.5 (fx->fl x)) (fx->fl N)) (fx->fl W))
+                    (fl* (fl/ (fl+ 0.5 (fx->fl y)) (fx->fl N)) (fx->fl H)))))
+  (make-spriteboard W H csd render initialize!))
