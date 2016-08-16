@@ -6,21 +6,12 @@
          racket/stxparam
          opengl
          (only-in ffi/unsafe ffi-lib)
-         mode-lambda
          mode-lambda/backend/gl
          lux
-         lux/chaos)
+         lux/chaos
+         "shared.rkt")
 (require (for-syntax racket/base
-                     racket/file
-                     racket/runtime-path
                      syntax/parse))
-
-(define (flsqr x)
-  (fl* x x))
-(define (fldist x1 x2 y1 y2)
-  (flsqrt
-   (fl+ (flsqr (fl- x1 x2))
-        (flsqr (fl- y1 y2)))))
 
 (set-gl-procedure-loader!
  (load-get-proc-address (ffi-lib #f) '()))
@@ -73,12 +64,6 @@
   (define (label! l)
     (platform-label! platform l))
 
-  (define last-click-t 0.0)
-  (define last-click-x 0.0)
-  (define last-click-y 0.0)
-  ;; XXX Magic numbers with no reason behind them
-  (define CLICK-THRESHOLD-T 125.0)
-  (define CLICK-THRESHOLD-D 30.0)
   (define (receive-rpc! r)
     (match r
       ['onDrawFrame
@@ -90,39 +75,15 @@
       ['onSurfaceCreated
        (set! the-fake-dc (make-fake-dc))]
       [(vector 'onTouchEvent 0 x y)
-       (set! last-click-t (current-inexact-milliseconds))
-       (set! last-click-x x)
-       (set! last-click-y y)]
+       (async-channel-put event-ch (vector 'down x y))]
       [(vector 'onTouchEvent 1 x y)
-       (define this-t
-         (fl- (current-inexact-milliseconds) last-click-t))
-       (define this-d
-         (fldist last-click-x x last-click-y y))
-       (cond
-         [(and (fl< this-t CLICK-THRESHOLD-T)
-               (fl< this-d CLICK-THRESHOLD-D))
-          (async-channel-put
-           event-ch
-           (vector 'click
-                   (fl/ (fl+ last-click-x x) 2.0)
-                   (fl/ (fl+ last-click-y y) 2.0)))]
-         [else
-          (printf "potential click ignored: t(~v) d(~v)" this-t this-d)])]
+       (async-channel-put event-ch (vector 'up x y))]
+      [(vector 'onTouchEvent 2 x y)
+       (async-channel-put event-ch (vector 'drag x y))]
       [x
        (void)]))
   (values (touch-chaos event-ch video-b label!)
           receive-rpc!))
-
-(begin-for-syntax
-  (define-runtime-path here "."))
-(define-syntax (define-static-csd stx)
-  (syntax-case stx ()
-    [(_ i p)
-     (quasisyntax/loc stx
-       (define i
-         (load-csd/bs
-          #,(file->bytes (build-path here (syntax->datum #'p))))))]))
-(define-static-csd csd "csd.rktd.gz")
 
 (define ((make-make-receive-rpc!
           #:make-app make-app)
@@ -169,32 +130,19 @@
        (rpc! (parse-rpc (ib->i b 0) b))
        (loop)])))
 
-(define-syntax-parameter play-sound!
-  (λ (stx) (raise-syntax-error 'play-sound! "Illegal outside define-app" stx)))
-(define-syntax-parameter render
-  (λ (stx) (raise-syntax-error 'render "Illegal outside define-app" stx)))
-
 (define-syntax (define-app stx)
   (syntax-parse stx
-    [(_ ([W:id W-v:expr] [H:id H-v:expr]) . body)
+    [(_ . make-app-args)
      (syntax/loc stx
        (begin
-         (define (make-app #:play-sound! local-play-sound!)
-           (define W W-v)
-           (define H H-v)
-           (define local-render (stage-draw/dc csd W H))
-           (syntax-parameterize
-               ([play-sound! (make-rename-transformer #'local-play-sound!)]
-                [render (make-rename-transformer #'local-render)])
-             . body))
          (define run-app
            (make-run-app
             (make-make-receive-rpc!
-             #:make-app make-app)))
+             #:make-app
+             (do-make-app . make-app-args))))
          (provide run-app)))]))
 
 (provide define-app
          csd
-         fldist
          play-sound!
          render)

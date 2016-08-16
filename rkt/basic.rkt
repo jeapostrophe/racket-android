@@ -5,9 +5,16 @@
          racket/match
          mode-lambda
          lux
-         "tablet.rkt"
-         #;"tablet-on-desktop.rkt"
+         #;"tablet.rkt"
+         "simulator.rkt"
          "pixel-c.rkt")
+
+(define (flsqr x)
+  (fl* x x))
+(define (fldist x1 x2 y1 y2)
+  (flsqrt
+   (fl+ (flsqr (fl- x1 x2))
+        (flsqr (fl- y1 y2)))))
 
 (define-app ([W PIXEL-W] [H PIXEL-H])
   (define fish-idx (sprite-idx csd 'fish))
@@ -42,7 +49,7 @@
                 #:theta cur-theta)))
      (define (word-event w e)
        (match e
-         [(vector 'click x y)
+         [(vector 'down x y)
           (cond
             [(fl< (fldist x fish-x y fish-y)
                   (fl* fish-m
