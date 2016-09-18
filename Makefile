@@ -18,7 +18,7 @@ app: build_all
 	cd project && ./gradlew installArmDebug
 
 .PHONY: build_all
-build_all: ${RACKETDEST}/racket-vm.3m.c ${RACKETDEST}/racket_app.c ${RACKETDEST}/libracket3m.a ${RACKETDEST}/include
+build_all: ${RACKETDEST} ${RACKETDEST}/racket-vm.3m.c ${RACKETDEST}/racket_app.c ${RACKETDEST}/libracket3m.a ${RACKETDEST}/include
 
 clean:
 	rm -f ${RACKETDEST}/racket_app.c ${RACKETDEST}/racket-vm.3m.c
