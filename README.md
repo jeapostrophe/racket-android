@@ -50,12 +50,10 @@ permissions) or `project/app/src/main/res` (for icons.)
 
 Look at `rkt/basic.rkt` for an example application.
 
-The simulator provides an interface compatible with the tablet and can
-be run locally directly from DrRacket/etc. This requires a OpenGL
-driver that supports most of the features of OpenGL ES 3. When you use
-the simulator, you will have to manually recompile `rkt/app-csd.rkt`
-to update the sprite database. (The tablet `Makefile` takes care of
-this automatically.)
+Use `make simulate` to use the simulator, which provides an interface
+compatible with the tablet and can be run locally directly from
+DrRacket/etc. This requires a OpenGL driver that supports most of the
+features of OpenGL ES 3. (You need to adjust the Racket file, too.)
 
 # TODO
 - Make 'raco ctool' use gzip for the bytecode to decrease app size.

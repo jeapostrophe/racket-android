@@ -13,7 +13,8 @@
    (fl+ (flsqr (fl- x1 x2))
         (flsqr (fl- y1 y2)))))
 
-(struct clickable (m-spr click! drag-drop! alive?))
+;; XXX this should not be mutable
+(struct clickable (m-spr click! drag-drop! [alive? #:mutable]))
 (define (click-click! o)
   ((clickable-click! o)))
 
@@ -31,30 +32,52 @@
 (define (drag-value m)
   ((draggable-drag-drop-v m)))
 
+;; This is a type of sprite that is neither draggable nor clickable.
+;; However, it is "dropable", in the sense that you can drop another
+;; sprite onto it
+(struct droppable (m-spr drag-drop! alive?))
+
+;; backgroundable is just a static, "background" sprite with no
+;; behavior, except that it can be deleted by setting alive? to #f
+(struct backgroundable (m-spr alive?))
+
 (define (object-drop! o v)
   (match o
     [(? clickable?)
      ((clickable-drag-drop! o) v)]
     [(? draggable?)
-     ((draggable-drag-drop! o) v)]))
+     ((draggable-drag-drop! o) v)]
+    [(? droppable?)
+     ((droppable-drag-drop! o) v)]))
+
+(define (force-meta-spr m)
+  (if (procedure? m)
+    (m)
+    m))
+
 (define (object-spr dragged? o)
   (match o
     [(? clickable?)
-     (define m (clickable-m-spr o))
-     (if (procedure? m)
-         (m)
-         m)]
+     (force-meta-spr (clickable-m-spr o))]
     [(? draggable?)
      ((draggable-f-spr o)
       dragged?
       (draggable-x o)
-      (draggable-y o))]))
+      (draggable-y o))]
+    [(? droppable?)
+     (force-meta-spr (droppable-m-spr o))]
+    [(? backgroundable?)
+     (force-meta-spr (backgroundable-m-spr o))]))
+
 (define (object-alive? o)
   (match o
     [(? clickable?)
      ((clickable-alive? o))]
     [(? draggable?)
-     ((draggable-alive? o))]))
+     ((draggable-alive? o))]
+    [(? droppable?) #t]
+    [(? backgroundable?)
+     ((backgroundable-alive? o))]))
 
 (struct spriteboard (metatree meta->tree) #:mutable)
 (define (make-the-spriteboard)
@@ -108,6 +131,23 @@
               drag-drop-v drag-drop!
               alive?)))
 
+(define (spriteboard-droppable!
+         sb
+         #:sprite m-spr
+         #:drag-drop! [drag-drop! void]
+         #:alive? [alive? (λ () #t)])
+  (spriteboard-add!
+   sb
+   (droppable m-spr drag-drop! alive?)))
+
+(define (spriteboard-backgroundable!
+         sb
+         #:sprite m-spr
+         #:alive? [alive? (λ () #t)])
+  (spriteboard-add!
+   sb
+   (backgroundable m-spr alive?)))
+
 (define (sprite-inside? csd t x y)
   (define t-idx (sprite-data-spr t))
 
@@ -131,10 +171,10 @@
        (fl<= y y-max)))
 
 (define (make-spriteboard W H csd render initialize!)
+  (define std-layer
+    (layer (fx->fl (/ W 2)) (fx->fl (/ H 2))))
   (define layer-c
-    (vector (layer (fx->fl (/ W 2)) (fx->fl (/ H 2)))
-            (layer (fx->fl (/ W 2)) (fx->fl (/ H 2)))
-            #f #f #f #f #f #f))
+    (make-vector 8 std-layer))
   (define the-sb (make-the-spriteboard))
   (define dragged-m #f)
 
@@ -186,10 +226,19 @@
   (app))
 
 (provide
+ ;; XXX these should not be exposed
+ set-clickable-alive?!
+ spriteboard-metatree
+ clickable-m-spr)
+
+(define meta-sprite-data/c
+  (or/c sprite-data? (-> sprite-data?)))
+
+(provide
  (contract-out
   [spriteboard-clickable!
    (->* (spriteboard?
-         #:sprite (or/c sprite-data? (-> sprite-data?)))
+         #:sprite meta-sprite-data/c)
         (#:click! (-> void?)
          #:drag-drop! (-> any/c void?)
          #:alive? (-> boolean?))
@@ -204,6 +253,17 @@
          #:drag-drop-v (-> any/c)
          #:drag-drop! (-> any/c void?)
          #:alive? (-> boolean?))
+        void?)]
+  [spriteboard-droppable!
+   (->* (spriteboard?
+         #:sprite meta-sprite-data/c)
+        (#:drag-drop! (-> any/c void?)
+         #:alive? (-> boolean?))
+        void?)]
+  [spriteboard-backgroundable!
+   (->* (spriteboard?
+         #:sprite meta-sprite-data/c)
+        (#:alive? (-> boolean?))
         void?)]
   [make-spriteboard
    (-> real? real? compiled-sprite-db? procedure? (-> spriteboard? void?)

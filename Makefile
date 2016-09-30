@@ -17,6 +17,11 @@ RACKETDEST=${JNI}/racket
 app: build_all
 	cd project && ./gradlew installArmDebug
 
+.PHONY: simulate
+simulate: rkt/csd.rktd.gz
+	raco make rkt/app.rkt
+	racket -t rkt/app.rkt
+
 .PHONY: build_all
 build_all: ${RACKETDEST} ${RACKETDEST}/racket-vm.3m.c ${RACKETDEST}/racket_app.c ${RACKETDEST}/libracket3m.a ${RACKETDEST}/include
 
