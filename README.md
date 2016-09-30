@@ -4,26 +4,39 @@ This project was funded by Black Swan Learning LLC.
 
 # DEPENDENCIES
 
-- OS X development machine (This is not an intrinsic requirement, but
-  a happenstance of how we made it.)
-
-- A Java JRE/JDK of the 1.8.0-era. (We test with 1.8.0_92.)
+## If you are using an OS X development machine...
 
 - Android SDK 23 with 23.0.2 build tools installed in
   `~/Library/Android/sdk` (the default location that Android Studio
   puts it in.)
-  
+
 - Android NDK for version 23, compiler version 4.9 installed in
   `~/Library/Android/sdk/ndk-bundle` (default location) (Perhaps we
   can generalize the build process to use a different one, but it is
   tested with this one)
-  
+
+## If you are using a Debian Linux development machine...
+
+ - Android SDK 23 with 23.0.3 build tools installed in
+   `/usr/lib/android-sdk` (system location from `apt-get install
+   google-android-build-tools-23-installer`)
+
+ - Android NDK for version 23, compiler version 4.9 installed in
+   `/usr/lib/android-ndk` (system location from `apt-get install
+   google-android-ndk-installer`)
+
+## And also, no matter your development machine...
+
+- A Java JRE/JDK of the 1.8.0-era. (We test with 1.8.0_92.)
+
 - An Android device that supports version 23, uses armeabi, and
   support OpenGL ES 3. We test with the Google Pixel C.
-  
+
 - A Racket version that supports `--enable-ffipoll` (6.6 and later)
 
-- The Racket packages, `lux`, `opengl`, and `mode-lambda`.
+- The Racket packages, `lux`, `opengl`, and `mode-lambda`. (Run `raco
+  pkg install mode-lambda`, and accept the installation of the
+  dependencies.)
 
 # USAGE
 
