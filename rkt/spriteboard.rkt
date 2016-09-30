@@ -99,6 +99,11 @@
          (cons m mt)
          mt))))
 
+(define (spriteboard-clear! sb)
+  (match-define (spriteboard mt m->t) sb)
+  (hash-clear! m->t)
+  (set-spriteboard-metatree! sb '()))
+
 (define (spriteboard-add! sb o)
   (set-spriteboard-metatree!
    sb (cons o (spriteboard-metatree sb)))
@@ -184,6 +189,7 @@
              #:unless not-o)
       (define t (hash-ref m->t m #f))
       (and t
+           (or (clickable? m) (draggable? m))
            (sprite-inside? csd t x y)
            m)))
 
@@ -236,6 +242,9 @@
 
 (provide
  (contract-out
+  [spriteboard-clear!
+   (-> spriteboard?
+       void?)]
   [spriteboard-clickable!
    (->* (spriteboard?
          #:sprite meta-sprite-data/c)
