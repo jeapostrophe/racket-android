@@ -19,7 +19,7 @@ This project was funded by Black Swan Learning LLC.
   tested with this one)
   
 - An Android device that supports version 23, uses armeabi, and
-  support OpenGL ES 3.
+  support OpenGL ES 3. We test with the Google Pixel C.
   
 - A Racket version that supports `--enable-ffipoll` (6.6 and later)
 
