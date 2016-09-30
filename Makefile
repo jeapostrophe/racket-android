@@ -1,12 +1,15 @@
 ifeq ($(shell uname -s),Darwin)
-NDK=${HOME}/Library/Android/sdk/ndk-bundle
+ANDROID_SDK=${HOME}/Library/Android/sdk
+NDK=${ANDROID_SDK}/ndk-bundle
 HOST=darwin-x86_64
 else
+ANDROID_SDK=/usr/lib/android-sdk
 NDK=/usr/lib/android-ndk
 HOST=linux-x86_64
-export ANDROID_HOME=/usr/lib/android-sdk
-export ANDROID_NDK_HOME=${NDK}
 endif
+
+export ANDROID_HOME=${ANDROID_SDK}
+export ANDROID_NDK_HOME=${NDK}
 
 ANDROID_VER=23
 COMP_VER=4.9
