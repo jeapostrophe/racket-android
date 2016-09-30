@@ -42,18 +42,22 @@
    
    (define/generic super-stop! chaos-stop!)
    (define (chaos-stop! c) (super-stop! (simulator-inner-chaos c)))])
-(define (make-simulator W H the-gui)
+(define (make-simulator sim-W sim-H the-gui)
   (define mouse-event%? (is-a?/c mouse-event%))
   (define event-ch (make-async-channel))
   (define scale 1.0)
+  (define inset-left 0.0)
+  (define inset-bot 0.0)
   (define event-t
     (thread
      (λ ()
        (define from-ch (chaos-event the-gui))
        (let loop ()
          (match (sync from-ch)
-           [(list 'resize w h)
-            (set! scale (compute-nice-scale 1.0 w W h H))]
+           [(list 'resize act-W act-H)
+            (set! scale (compute-nice-scale 1.0 act-W sim-W act-H sim-H))
+            (set! inset-left (fl/ (fl- (fx->fl act-W) (fl* scale (fx->fl sim-W))) 2.0))
+            (set! inset-bot (fl/ (fl- (fx->fl act-H) (fl* scale (fx->fl sim-H))) 2.0))]
            [(? mouse-event%? me)
             (define type
               (cond
@@ -68,8 +72,8 @@
             (when type
               (define ne
                 (vector type
-                        (fl/ (fx->fl (send me get-x)) scale)
-                        (fl/ (fx->fl (send me get-y)) scale)))
+                        (fl+ inset-left (fl/ (fx->fl (send me get-x)) scale))
+                        (fl+ inset-bot (fl/ (fx->fl (send me get-y)) scale))))
               (async-channel-put event-ch ne))]
            [_
             (void)])
