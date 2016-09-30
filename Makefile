@@ -1,7 +1,15 @@
+ifeq ($(shell uname -s),Darwin)
 NDK=${HOME}/Library/Android/sdk/ndk-bundle
+HOST=darwin-x86_64
+else
+NDK=/usr/lib/android-ndk
+HOST=linux-x86_64
+export ANDROID_HOME=/usr/lib/android-sdk
+export ANDROID_NDK_HOME=${NDK}
+endif
+
 ANDROID_VER=23
 COMP_VER=4.9
-HOST=darwin-x86_64
 TARGET=arm-linux-androideabi
 COMP_PATH=${NDK}/toolchains/${TARGET}-${COMP_VER}/prebuilt/${HOST}/bin/
 
