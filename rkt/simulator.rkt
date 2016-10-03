@@ -72,8 +72,12 @@
             (when type
               (define ne
                 (vector type
-                        (fl+ inset-left (fl/ (fx->fl (send me get-x)) scale))
-                        (fl+ inset-bot (fl/ (fx->fl (send me get-y)) scale))))
+                        (fl/ (fl- (fx->fl (send me get-x))
+                                  inset-left)
+                             scale)
+                        (fl/ (fl- (fx->fl (send me get-y))
+                                  inset-bot)
+                             scale)))
               (async-channel-put event-ch ne))]
            [_
             (void)])
