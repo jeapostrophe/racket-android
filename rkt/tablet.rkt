@@ -143,6 +143,7 @@
          (provide run-app)))]))
 
 (provide define-app
+         define-static-font
          csd
          play-sound!
          render)

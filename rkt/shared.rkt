@@ -23,6 +23,13 @@
           #,(file->bytes (build-path here (syntax->datum #'p))))))]))
 (define-static-csd csd "csd.rktd.gz")
 
+(define-syntax (define-static-font stx)
+  (syntax-case stx ()
+    [(_ i p)
+     (quasisyntax/loc stx
+       (define i
+         #,(file->value (build-path here (syntax->datum #'p)))))]))
+
 (define-syntax (do-make-app stx)
   (syntax-parse stx
     [(_ ([W:id W-v:expr] [H:id H-v:expr]) . body)

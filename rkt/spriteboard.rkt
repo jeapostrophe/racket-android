@@ -51,9 +51,17 @@
      ((droppable-drag-drop! o) v)]))
 
 (define (force-meta-spr m)
-  (if (procedure? m)
-    (m)
-    m))
+  (define v
+    (if (procedure? m)
+      (m)
+      m))
+  (define r
+    (if (meta-sprite? v)
+      (meta-sprite-sd v)
+      v))
+  (when (meta-sprite? v)
+    (hash-set! c->ms r v))
+  r)
 
 (define (object-spr dragged? o)
   (match o
@@ -96,8 +104,8 @@
    (for/fold ([mt null])
              ([m (in-list mt)])
      (if (object-alive? m)
-         (cons m mt)
-         mt))))
+       (cons m mt)
+       mt))))
 
 (define (spriteboard-clear! sb)
   (match-define (spriteboard mt m->t) sb)
@@ -153,27 +161,39 @@
    sb
    (backgroundable m-spr alive?)))
 
+(define c->ms (make-weak-hasheq))
 (define (sprite-inside? csd t x y)
-  (define t-idx (sprite-data-spr t))
+  (define-values
+    (x-min x-max y-min y-max)
+    (match t
+      [(? pair?)
+       (define ms (hash-ref c->ms t #f))
+       (apply values
+              (if ms (meta-sprite-dims ms)
+                  (list 0.0 0.0 0.0 0.0)))]
+      [(? sprite-data?)
+       (define t-idx (sprite-data-spr t))
 
-  (define tcx (sprite-data-dx t))
-  (define sw (fx->fl (sprite-width csd t-idx)))
-  (define tw (fl* (sprite-data-mx t) sw))
-  (define thw (fl/ tw 2.0))
-  (define x-min (fl- tcx thw))
-  (define x-max (fl+ tcx thw))
+       (define tcx (sprite-data-dx t))
+       (define sw (fx->fl (sprite-width csd t-idx)))
+       (define tw (fl* (sprite-data-mx t) sw))
+       (define thw (fl/ tw 2.0))
+       (define x-min (fl- tcx thw))
+       (define x-max (fl+ tcx thw))
 
-  (define tcy (sprite-data-dy t))
-  (define sh (fx->fl (sprite-height csd t-idx)))
-  (define th (fl* (sprite-data-my t) sh))
-  (define thh (fl/ th 2.0))
-  (define y-min (fl- tcy thh))
-  (define y-max (fl+ tcy thh))
+       (define tcy (sprite-data-dy t))
+       (define sh (fx->fl (sprite-height csd t-idx)))
+       (define th (fl* (sprite-data-my t) sh))
+       (define thh (fl/ th 2.0))
+       (define y-min (fl- tcy thh))
+       (define y-max (fl+ tcy thh))
 
-  (and (fl<= x-min x)
-       (fl<= x x-max)
-       (fl<= y-min y)
-       (fl<= y y-max)))
+       (values x-min x-max y-min y-max)]))
+  
+     (and (fl<= x-min x)
+          (fl<= x x-max)
+          (fl<= y-min y)
+          (fl<= y y-max)))
 
 (define (make-spriteboard W H csd render initialize!)
   (define std-layer
@@ -237,11 +257,22 @@
  spriteboard-metatree
  clickable-m-spr)
 
+(struct meta-sprite (dims sd))
+
 (define meta-sprite-data/c
-  (or/c sprite-data? (-> sprite-data?)))
+  (or/c sprite-data?
+        meta-sprite?
+        (-> (or/c sprite-data? meta-sprite?))))
 
 (provide
  (contract-out
+  [meta-sprite?
+   (-> any/c
+       boolean?)]
+  [meta-sprite
+   (-> (list/c flonum? flonum? flonum? flonum?)
+       any/c
+       meta-sprite?)]
   [spriteboard-clear!
    (-> spriteboard?
        void?)]

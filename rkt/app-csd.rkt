@@ -1,1 +1,1 @@
-xprize/byron-csd.rkt
+basic-csd.rkt

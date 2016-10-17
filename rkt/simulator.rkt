@@ -101,6 +101,7 @@
                 #:play-sound! racket/gui-play-sound!)))))))]))
 
 (provide define-app
+         define-static-font
          csd
          play-sound!
          render)
