@@ -251,12 +251,6 @@
   (initialize! the-sb)
   (app))
 
-(provide
- ;; XXX these should not be exposed
- set-clickable-alive?!
- spriteboard-metatree
- clickable-m-spr)
-
 (struct meta-sprite (dims sd))
 
 (define meta-sprite-data/c
