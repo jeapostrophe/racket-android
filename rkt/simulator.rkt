@@ -6,6 +6,7 @@
          racket/flonum
          racket/fixnum
          racket/generic
+         racket/async-channel
          lux
          lux/chaos
          lux/chaos/gui
@@ -16,8 +17,17 @@
                      syntax/parse))
 
 (define-runtime-path asset-path "../project/app/src/main/assets/")
-(define (racket/gui-play-sound! p)
-  (play-sound (build-path asset-path (bytes->path p)) #t))
+(define (make-racket/gui-play-sound!)
+  (define ch (make-async-channel))
+  (define t
+    (thread
+     (λ ()
+       (let loop ()
+         (define p (async-channel-get ch))
+         (play-sound (build-path asset-path (bytes->path p)) #f)
+         (loop)))))
+  (λ (p)
+    (async-channel-put ch p)))
 
 (gl-backend-version '3.3)
 
@@ -25,21 +35,21 @@
   #:methods gen:chaos
   [(define/generic super-start! chaos-start!)
    (define (chaos-start! c) (super-start! (simulator-inner-chaos c)))
-   
+
    (define/generic super-yield chaos-yield)
    (define (chaos-yield c e) (super-yield (simulator-inner-chaos c) e))
-   
+
    (define (chaos-event c) (simulator-event-ch c))
-   
+
    (define/generic super-output! chaos-output!)
    (define (chaos-output! c o) (super-output! (simulator-inner-chaos c) o))
-   
+
    (define/generic super-label! chaos-label!)
    (define (chaos-label! c lab) (super-label! (simulator-inner-chaos c) lab))
-   
+
    (define/generic super-swap! chaos-swap!)
    (define (chaos-swap! c t) (super-swap! (simulator-inner-chaos c) t))
-   
+
    (define/generic super-stop! chaos-stop!)
    (define (chaos-stop! c) (super-stop! (simulator-inner-chaos c)))])
 (define (make-simulator sim-W sim-H the-gui)
@@ -98,7 +108,7 @@
             (λ ()
               (fiat-lux
                (make-app
-                #:play-sound! racket/gui-play-sound!)))))))]))
+                #:play-sound! (make-racket/gui-play-sound!))))))))]))
 
 (provide define-app
          define-static-font

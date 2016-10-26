@@ -26,6 +26,7 @@
        #:click!
        (λ ()
          (play-sound! #"sample.m4a")
+         (play-sound! #"sample.m4a")
          (cond
            [fish-spin?
             (set! fish-spin? #f)]

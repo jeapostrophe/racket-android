@@ -1,6 +1,9 @@
 package org.racketlang.android.project;
 
 import java.io.IOException;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import android.app.Activity;
 import android.widget.TextView;
@@ -17,7 +20,7 @@ import android.view.View;
 import android.content.res.Resources;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
-import android.media.SoundPool;
+import android.media.MediaPlayer;
 
 import javax.microedition.khronos.egl.EGL10;
 import javax.microedition.khronos.egl.EGLConfig;
@@ -73,71 +76,97 @@ class RAPListener implements View.OnTouchListener {
 }
 
 class RAPAudio {
-    // XXX Maybe use a Map to save old sounds, current it task about 100ms to load
-    static SoundPool sp = new SoundPool.Builder().build();
+    class TheWorker implements Runnable {
+        class TheListener implements MediaPlayer.OnCompletionListener {
+            Semaphore signal = null;
 
-    class RAPSPListener implements SoundPool.OnLoadCompleteListener {
-        RAPAudio ra = null;
-        
-        public RAPSPListener( RAPAudio ra ) {
-            this.ra = ra;
+            public TheListener( Semaphore signal ) {
+                this.signal = signal;
+            }
+
+            public void onCompletion( MediaPlayer mp ) {
+                Log.w("RAPAudio", "Outstanding play finished");
+                this.signal.release();
+            }
         }
 
-        public void onLoadComplete( SoundPool sp, int sample, int status ) {
-            if ( status == 0 ) {
-                ra.finish(sample);
+        BlockingQueue<String> bq = null;
+
+        Semaphore signal = null;
+        TheListener cl = null;
+        AssetManager am = null;
+        MediaPlayer mp = null;
+
+        public TheWorker( Context context, BlockingQueue<String> bq ) {
+            this.bq = bq;
+            this.signal = new Semaphore(0);
+            this.am = context.getResources().getAssets();
+            this.mp = new MediaPlayer();
+            this.cl = new TheListener(signal);
+
+            this.mp.setOnCompletionListener( this.cl );
+        }
+
+        void doPlaySound( String p ) {
+            Log.w("RAPAudio", "Starting to load sample (" + p + ")");
+            try {
+                AssetFileDescriptor afd = am.openFd(p);
+                mp.setDataSource(afd.getFileDescriptor(),
+                                 afd.getStartOffset(),
+                                 afd.getLength());
+                afd.close();
+                mp.prepare();
+            }
+            catch (IOException e) {
+                Log.e("RAPAudio", "Failed to load sample (" + p + ")");
+            }
+
+            Log.w("RAPAudio", "Playing sample (" + p + ")");
+            mp.start();
+        }
+
+        public void run() {
+            while (true) {
+                mp.reset();
+                try {
+                    String p = bq.take();
+                    Log.w("RAPAudio", "Dequeued sample request (" + p + ")");
+                    doPlaySound( p );
+                    signal.acquire();
+                }
+                catch (InterruptedException e) {
+                    Log.e("RAPAudio", "Failed to dequeue sample");
+                }
             }
         }
     }
-    static RAPSPListener lcl = null;
-    
-    static AssetManager am = null;
+
+    static TheWorker tw = null;
+    static BlockingQueue<String> bq = null;
+    static Thread twt = null;
     public RAPAudio(Context context) {
-        am = context.getResources().getAssets();
-        lcl = new RAPSPListener(this);
-        sp.setOnLoadCompleteListener( lcl );
+        bq = new LinkedBlockingQueue<String>(128);
+        tw = new TheWorker( context, bq );
+        twt = new Thread(tw);
+
+        twt.start();
     }
 
-    static boolean playingHuh = false;
-    static String loading_p = null;
-    static int sample_id = 0;
-    static int stream_id = 0;
-
-    static void finish( int finished_sample_id ) {
-        if ( sample_id == finished_sample_id ) {
-            Log.w("RAPAudio", "Finished loading sample (" + loading_p + ")");
-            stream_id = sp.play(sample_id, 1.0f, 1.0f, 0, 0, 1.0f);
-            if ( stream_id == 0 ) {
-                Log.e("RAPAudio", "Failed to play sample (" + loading_p + ")");
-            } else {
-                playingHuh = true;
-            }
-        }
-    }
-    
     static void playSound( String p ) {
-        if ( playingHuh ) {
-            sp.stop(stream_id);
-            sp.unload(sample_id);
-            playingHuh = false;
-        }
-
-        loading_p = p;
+        Log.w("RAPAudio", "Queuing sample request (" + p + ")");
         try {
-            AssetFileDescriptor afd = am.openFd(p);
-            Log.w("RAPAudio", "Starting to load sample (" + loading_p + ")");
-            sample_id = sp.load(afd, 1);
-            // afd.close();
+            bq.put(p);
         }
-        catch (IOException e) {
-            Log.e("RAPAudio", "Failed to load sample (" + loading_p + ")");
+        catch (InterruptedException e) {
+            Log.e("RAPAudio", "Failed to queue sample (" + p + ")");
         }
+        Log.w("RAPAudio", "Queued sample request (" + p + ")");
     }
 }
 
 public class RacketAndroidProject extends Activity {
     RAPView mView;
-    
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
