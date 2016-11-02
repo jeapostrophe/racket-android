@@ -34,7 +34,8 @@ class RLib {
     public static native void onSurfaceCreated();
     public static native void onCreate( RAPAudio rs );
     public static native boolean onTouchEvent(int a, float x, float y);
-
+    public static native void soundComplete( int id );
+    
     static {
         System.loadLibrary("racket-android-project");
     }
@@ -76,6 +77,15 @@ class RAPListener implements View.OnTouchListener {
 }
 
 class RAPAudio {
+    static class Request {
+        public String p;
+        public int id;
+        public Request( String p, int id ) {
+            this.p = p;
+            this.id = id;
+        }
+    }
+    
     class TheWorker implements Runnable {
         class TheListener implements MediaPlayer.OnCompletionListener {
             Semaphore signal = null;
@@ -90,14 +100,14 @@ class RAPAudio {
             }
         }
 
-        BlockingQueue<String> bq = null;
+        BlockingQueue<Request> bq = null;
 
         Semaphore signal = null;
         TheListener cl = null;
         AssetManager am = null;
         MediaPlayer mp = null;
 
-        public TheWorker( Context context, BlockingQueue<String> bq ) {
+        public TheWorker( Context context, BlockingQueue<Request> bq ) {
             this.bq = bq;
             this.signal = new Semaphore(0);
             this.am = context.getResources().getAssets();
@@ -129,10 +139,11 @@ class RAPAudio {
             while (true) {
                 mp.reset();
                 try {
-                    String p = bq.take();
-                    Log.w("RAPAudio", "Dequeued sample request (" + p + ")");
-                    doPlaySound( p );
+                    Request r = bq.take();
+                    Log.w("RAPAudio", "Dequeued sample request (" + r.p + ")");
+                    doPlaySound( r.p );
                     signal.acquire();
+                    RLib.soundComplete( r.id );
                 }
                 catch (InterruptedException e) {
                     Log.e("RAPAudio", "Failed to dequeue sample");
@@ -142,25 +153,31 @@ class RAPAudio {
     }
 
     static TheWorker tw = null;
-    static BlockingQueue<String> bq = null;
+    static BlockingQueue<Request> bq = null;
     static Thread twt = null;
+    static int next_id = 0;
     public RAPAudio(Context context) {
-        bq = new LinkedBlockingQueue<String>(128);
+        bq = new LinkedBlockingQueue<Request>(128);
         tw = new TheWorker( context, bq );
         twt = new Thread(tw);
 
         twt.start();
     }
 
-    static void playSound( String p ) {
+    static int playSound( String p ) {
+        int id = next_id++;
+        Request r = new Request( p, id );
+        
         Log.w("RAPAudio", "Queuing sample request (" + p + ")");
         try {
-            bq.put(p);
+            bq.put(r);
         }
         catch (InterruptedException e) {
             Log.e("RAPAudio", "Failed to queue sample (" + p + ")");
         }
         Log.w("RAPAudio", "Queued sample request (" + p + ")");
+
+        return id;
     }
 }
 

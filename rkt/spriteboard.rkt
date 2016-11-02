@@ -213,7 +213,7 @@
     (define cs
       (for/fold ([c empty])
                 ([m (in-list (spriteboard-metatree the-sb))]
-                 #:unless not-o)
+                 #:unless (eq? m not-o))
         (define t (hash-ref m->t m #f))
         (if (and t
                  (or (clickable? m) (draggable? m))

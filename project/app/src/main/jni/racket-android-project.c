@@ -61,6 +61,7 @@ int main_t_fd[2];
 #define RAP_onSurfaceChanged 1
 #define RAP_onSurfaceCreated 2
 #define RAP_onTouchEvent 3
+#define RAP_soundComplete 4
 
 struct rvm_api_t {
   uint32_t call;
@@ -84,12 +85,12 @@ Scheme_Object *rap_audio(int argc, Scheme_Object **argv) {
   jstring str = (*env)->NewStringUTF(env, SCHEME_BYTE_STR_VAL(argv[0]));
   jclass cls = (*env)->GetObjectClass(env, the_RAPAudio);
   jmethodID mid =
-    (*env)->GetStaticMethodID(env, cls, "playSound", "(Ljava/lang/String;)V");
-  (*env)->CallStaticVoidMethod(env, cls, mid, str);
+    (*env)->GetStaticMethodID(env, cls, "playSound", "(Ljava/lang/String;)I");
+  jint jid = (*env)->CallStaticIntMethod(env, cls, mid, str);
 
   (*the_JVM)->DetachCurrentThread(the_JVM);
-  
-  return NULL;
+
+  return scheme_make_integer( jid );
 }
 
 Scheme_Object *rap_set_label(int argc, Scheme_Object **argv) {
@@ -167,6 +168,16 @@ Java_org_racketlang_android_project_RLib_onTouchEvent(
  jfloat y) {
   struct rvm_api_t rpc = { .call = RAP_onTouchEvent,
                            .args = { {.i=a}, {.f=x}, {.f=y} } };
+  return send_to_racket( rpc );
+}
+
+void
+Java_org_racketlang_android_project_RLib_soundComplete(
+ JNIEnv* env,
+ jobject thiz,
+ jint id ) {
+  struct rvm_api_t rpc = { .call = RAP_soundComplete,
+                           .args = { {.i = id} } };
   return send_to_racket( rpc );
 }
 

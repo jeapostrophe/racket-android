@@ -18,16 +18,20 @@
 
 (define-runtime-path asset-path "../project/app/src/main/assets/")
 (define (make-racket/gui-play-sound!)
+  (struct msg (p s))
   (define ch (make-async-channel))
   (define t
     (thread
      (λ ()
        (let loop ()
-         (define p (async-channel-get ch))
+         (match-define (msg p s) (async-channel-get ch))
          (play-sound (build-path asset-path (bytes->path p)) #f)
+         (semaphore-post s)
          (loop)))))
   (λ (p)
-    (async-channel-put ch p)))
+    (define s (make-semaphore))
+    (async-channel-put ch (msg p s))
+    s))
 
 (gl-backend-version '3.3)
 

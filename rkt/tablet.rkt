@@ -80,15 +80,29 @@
        (async-channel-put event-ch (vector 'up x y))]
       [(vector 'onTouchEvent 2 x y)
        (async-channel-put event-ch (vector 'drag x y))]
+      [(vector 'soundComplete id)
+       (define s (hash-ref sound->sema id #f))
+       (when s
+         (semaphore-post s)
+         (hash-remove! sound->sema id))]
       [x
        (void)]))
+
+  (define sound->sema (make-hasheq))
+  (define (play-sound! p)
+    (define s (make-semaphore))
+    (define id (platform-play-sound! platform p))
+    (hash-set! sound->sema id s)
+    s)
+  
   (values (touch-chaos event-ch video-b label!)
-          receive-rpc!))
+          receive-rpc!
+          play-sound!))
 
 (define ((make-make-receive-rpc!
           #:make-app make-app)
          #:platform platform)
-  (define-values (touch-chaos touch-rpc!)
+  (define-values (touch-chaos touch-rpc! touch-play-sound!)
     (make-touch #:platform platform))
   (define app-t
     (thread
@@ -99,7 +113,7 @@
           (fiat-lux
            (make-app
             #:play-sound!
-            (λ (p) (platform-play-sound! platform p)))))))))
+            touch-play-sound!)))))))
   touch-rpc!)
 
 (define (ib->i b s)
@@ -116,7 +130,9 @@
     [2
      'onSurfaceCreated]
     [3
-     (vector 'onTouchEvent (ib->i b 4) (fb->r b 8) (fb->r b 12))]))
+     (vector 'onTouchEvent (ib->i b 4) (fb->r b 8) (fb->r b 12))]
+    [4
+     (vector 'soundComplete (ib->i b 4))]))
 
 (define ((make-run-app make-rpc!) in rpc-size platform)
   (printf "RPC Stream initializing\n")

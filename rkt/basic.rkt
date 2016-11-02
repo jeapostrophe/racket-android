@@ -10,9 +10,9 @@
          "pixel-c.rkt"
 
          ;; Require this to build on the tablet
-         #;"tablet.rkt"
+         "tablet.rkt"
          ;; Require this to use the simulator
-         "simulator.rkt")
+         #;"simulator.rkt")
 
 (define-app ([W PIXEL-W] [H PIXEL-H])
   (define-static-font the-font "csd-font.rktd")
@@ -71,7 +71,10 @@
        #:drag-drop-v
        (λ () i)
        #:drag-drop!
-       (λ (v) (printf "Chomp chump ~v ~v\n" i v))
+       (λ (v)
+         (printf "About to play\n")
+         (sync (play-sound! #"sample.m4a"))
+         (printf "Chomp chump ~v ~v\n" i v))
        #:alive?
        (λ () (not dropped?))))
     (define (make-a-cloud! x y)
