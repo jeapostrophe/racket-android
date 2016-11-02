@@ -3,6 +3,7 @@
          racket/fixnum
          racket/match
          racket/contract/base
+         racket/list
          mode-lambda
          lux)
 
@@ -195,6 +196,10 @@
           (fl<= y-min y)
           (fl<= y y-max)))
 
+(define (argmax* f l)
+  (and (pair? l)
+       (argmax f l)))
+
 (define (make-spriteboard W H csd render initialize!)
   (define std-layer
     (layer (fx->fl (/ W 2)) (fx->fl (/ H 2))))
@@ -205,13 +210,21 @@
 
   (define (find-object not-o x y)
     (define m->t (spriteboard-meta->tree the-sb))
-    (for/or ([m (in-list (spriteboard-metatree the-sb))]
-             #:unless not-o)
-      (define t (hash-ref m->t m #f))
-      (and t
-           (or (clickable? m) (draggable? m))
-           (sprite-inside? csd t x y)
-           m)))
+    (define cs
+      (for/fold ([c empty])
+                ([m (in-list (spriteboard-metatree the-sb))]
+                 #:unless not-o)
+        (define t (hash-ref m->t m #f))
+        (if (and t
+                 (or (clickable? m) (draggable? m))
+                 (sprite-inside? csd t x y))
+          (cons (cons t m) c)
+          c)))
+    (cdr
+     (or (argmax* (λ (t*m)
+                    (sprite-data-layer (car t*m)))
+                  cs)
+         (cons #f #f))))
 
   (struct app ()
     #:methods gen:word
