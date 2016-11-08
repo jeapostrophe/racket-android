@@ -163,6 +163,12 @@
    (backgroundable m-spr alive?)))
 
 (define c->ms (make-weak-hasheq))
+(define (sprite-layer t)
+  (match t
+    [(? pair?)
+     (apply max (map sprite-layer t))]
+    [(? sprite-data?)
+     (sprite-data-layer t)]))
 (define (sprite-inside? csd t x y)
   (define-values
     (x-min x-max y-min y-max)
@@ -222,7 +228,7 @@
           c)))
     (cdr
      (or (argmax* (λ (t*m)
-                    (sprite-data-layer (car t*m)))
+                    (sprite-layer (car t*m)))
                   cs)
          (cons #f #f))))
 

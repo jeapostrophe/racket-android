@@ -10,9 +10,9 @@
          "pixel-c.rkt"
 
          ;; Require this to build on the tablet
-         "tablet.rkt"
+         #;"tablet.rkt"
          ;; Require this to use the simulator
-         #;"simulator.rkt")
+         "simulator.rkt")
 
 (define-app ([W PIXEL-W] [H PIXEL-H])
   (define-static-font the-font "csd-font.rktd")
