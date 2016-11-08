@@ -165,8 +165,9 @@
 (define c->ms (make-weak-hasheq))
 (define (sprite-layer t)
   (match t
-    [(? pair?)
-     (apply max (map sprite-layer t))]
+    [(cons a d)
+     (max (sprite-layer a)
+          (sprite-layer d))]
     [(? sprite-data?)
      (sprite-data-layer t)]
     [#f
