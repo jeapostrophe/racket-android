@@ -168,7 +168,9 @@
     [(? pair?)
      (apply max (map sprite-layer t))]
     [(? sprite-data?)
-     (sprite-data-layer t)]))
+     (sprite-data-layer t)]
+    [#f
+     0]))
 (define (sprite-inside? csd t x y)
   (define-values
     (x-min x-max y-min y-max)
