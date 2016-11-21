@@ -69,10 +69,11 @@
     [(? clickable?)
      (force-meta-spr (clickable-m-spr o))]
     [(? draggable?)
-     ((draggable-f-spr o)
-      dragged?
-      (draggable-x o)
-      (draggable-y o))]
+     (force-meta-spr
+      ((draggable-f-spr o)
+       dragged?
+       (draggable-x o)
+       (draggable-y o)))]
     [(? droppable?)
      (force-meta-spr (droppable-m-spr o))]
     [(? backgroundable?)
@@ -172,6 +173,26 @@
      (sprite-data-layer t)]
     [#f
      0]))
+
+(define (sprite-data-bb csd t)
+  (define t-idx (sprite-data-spr t))
+
+  (define tcx (sprite-data-dx t))
+  (define sw (fx->fl (sprite-width csd t-idx)))
+  (define tw (fl* (sprite-data-mx t) sw))
+  (define thw (fl/ tw 2.0))
+  (define x-min (fl- tcx thw))
+  (define x-max (fl+ tcx thw))
+
+  (define tcy (sprite-data-dy t))
+  (define sh (fx->fl (sprite-height csd t-idx)))
+  (define th (fl* (sprite-data-my t) sh))
+  (define thh (fl/ th 2.0))
+  (define y-min (fl- tcy thh))
+  (define y-max (fl+ tcy thh))
+
+  (values x-min x-max y-min y-max))
+
 (define (sprite-inside? csd t x y)
   (define-values
     (x-min x-max y-min y-max)
@@ -182,28 +203,12 @@
               (if ms (meta-sprite-dims ms)
                   (list 0.0 0.0 0.0 0.0)))]
       [(? sprite-data?)
-       (define t-idx (sprite-data-spr t))
+       (sprite-data-bb csd t)]))
 
-       (define tcx (sprite-data-dx t))
-       (define sw (fx->fl (sprite-width csd t-idx)))
-       (define tw (fl* (sprite-data-mx t) sw))
-       (define thw (fl/ tw 2.0))
-       (define x-min (fl- tcx thw))
-       (define x-max (fl+ tcx thw))
-
-       (define tcy (sprite-data-dy t))
-       (define sh (fx->fl (sprite-height csd t-idx)))
-       (define th (fl* (sprite-data-my t) sh))
-       (define thh (fl/ th 2.0))
-       (define y-min (fl- tcy thh))
-       (define y-max (fl+ tcy thh))
-
-       (values x-min x-max y-min y-max)]))
-  
-     (and (fl<= x-min x)
-          (fl<= x x-max)
-          (fl<= y-min y)
-          (fl<= y y-max)))
+  (and (fl<= x-min x)
+       (fl<= x x-max)
+       (fl<= y-min y)
+       (fl<= y y-max)))
 
 (define (argmax* f l)
   (and (pair? l)
@@ -280,6 +285,23 @@
         meta-sprite?
         (-> (or/c sprite-data? meta-sprite?))))
 
+(define (meta-sprite* csd ov)
+  (let loop ([x-min +inf.0]
+             [x-max -inf.0]
+             [y-min +inf.0]
+             [y-max -inf.0]
+             [v ov])
+    (cond
+      [(or (null? v) (not v))
+       (meta-sprite (list x-min x-max y-min y-max) ov)]
+      [else
+       (define-values (tx-min tx-max ty-min ty-max) (sprite-data-bb csd (car v)))
+       (loop (min x-min tx-min)
+             (max x-max tx-max)
+             (min y-min ty-min)
+             (max y-max ty-max)
+             (cdr v))])))
+
 (provide
  (contract-out
   [meta-sprite?
@@ -288,6 +310,9 @@
   [meta-sprite
    (-> (list/c flonum? flonum? flonum? flonum?)
        any/c
+       meta-sprite?)]
+  [meta-sprite*
+   (-> compiled-sprite-db? any/c
        meta-sprite?)]
   [spriteboard-clear!
    (-> spriteboard?
@@ -303,7 +328,7 @@
    (->* (spriteboard?
          #:init-x flonum?
          #:init-y flonum?
-         #:sprite (-> boolean? flonum? flonum? sprite-data?))
+         #:sprite (-> boolean? flonum? flonum? meta-sprite-data/c))
         (#:drag-start! (-> void?)
          #:drag-stop! (-> void?)
          #:drag-drop-v (-> any/c)

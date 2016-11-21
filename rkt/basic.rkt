@@ -103,5 +103,21 @@
                                         (fl/ (fx->fl W) 2.0) (fl/ (fx->fl H) 4.0)
                                         #:layer 2
                                         #:mx 10.0 #:my 10.0
-                                        #:r 255 #:g 0 #:b 0))))
+                                        #:r 255 #:g 0 #:b 0)))
+
+    (spriteboard-draggable!
+     sb
+     #:init-x (fl/ (fx->fl W) 4.0)
+     #:init-y (fl/ (fx->fl H) 2.0)
+     #:sprite
+     (λ (dragging? x y)
+       (meta-sprite*
+        csd
+        (text-render "Drag Me"
+                     x y
+                     #:layer 2
+                     #:mx 10.0 #:my 10.0
+                     #:r (if dragging? 0 255)
+                     #:g (if dragging? 255 0)
+                     #:b 0))) ))
   (make-spriteboard W H csd render initialize!))
