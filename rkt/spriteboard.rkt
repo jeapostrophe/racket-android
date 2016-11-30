@@ -2,6 +2,7 @@
 (require racket/flonum
          racket/fixnum
          racket/match
+         racket/math
          racket/contract/base
          racket/list
          mode-lambda
@@ -89,18 +90,18 @@
     [(? backgroundable?)
      ((backgroundable-alive? o))]))
 
-(struct spriteboard (metatree meta->tree) #:mutable)
+(struct spriteboard (orient metatree meta->tree) #:mutable)
 (define (make-the-spriteboard)
-  (spriteboard null (make-hasheq)))
+  (spriteboard 'landscape null (make-hasheq)))
 (define (spriteboard-tree dragged-m sb)
-  (match-define (spriteboard mt m->t) sb)
+  (match-define (spriteboard ot mt m->t) sb)
   (hash-clear! m->t)
   (for/list ([m (in-list mt)])
     (define t (object-spr (eq? dragged-m m) m))
     (hash-set! m->t m t)
     t))
 (define (spriteboard-gc! sb)
-  (match-define (spriteboard mt m->t) sb)
+  (match-define (spriteboard ot mt m->t) sb)
   (set-spriteboard-metatree!
    sb
    (for/fold ([mt null])
@@ -110,7 +111,8 @@
        mt))))
 
 (define (spriteboard-clear! sb)
-  (match-define (spriteboard mt m->t) sb)
+  (match-define (spriteboard ot mt m->t) sb)
+  (spriteboard-orient! sb 'landscape)
   (hash-clear! m->t)
   (set-spriteboard-metatree! sb '()))
 
@@ -214,11 +216,7 @@
   (and (pair? l)
        (argmax f l)))
 
-(define (make-spriteboard W H csd render initialize!)
-  (define std-layer
-    (layer (fx->fl (/ W 2)) (fx->fl (/ H 2))))
-  (define layer-c
-    (make-vector 8 std-layer))
+(define (make-spriteboard W H csd render initialize!)  
   (define the-sb (make-the-spriteboard))
   (define dragged-m #f)
 
@@ -245,10 +243,42 @@
     [(define (word-fps w) 30.0)
      (define (word-label w ft)
        (lux-standard-label "Spriteboard" ft))
+
+     (define layer-cx (fx->fl (/ W 2)))
+     (define layer-cy (fx->fl (/ H 2)))
+     (define portrait-theta (fl/ pi 2.0))
      (define (word-output w)
+       (define std-layer
+         (layer layer-cx layer-cy
+                #:theta
+                (match (spriteboard-orient the-sb)
+                  ['landscape 0.0]
+                  ['portrait portrait-theta])))
+       (define layer-c
+         (make-vector 8 std-layer))
        (render layer-c '() (spriteboard-tree dragged-m the-sb)))
+
+     (define (maybe-rotate e)
+       (match (spriteboard-orient the-sb)
+         ['landscape
+          e]
+         ['portrait
+          (match e
+            [(vector label ox oy)
+             ;; Translate to origin
+             (define x (fl- ox layer-cx))
+             (define y (fl- oy layer-cy))
+             ;; Rotate back to landscape
+             (define c (flcos (fl* -1.0 portrait-theta)))
+             (define s (flsin (fl* -1.0 portrait-theta)))
+             (define rx (fl- (fl* x c) (fl* y s)))
+             (define ry (fl+ (fl* x s) (fl* y c)))
+             ;; Translate back to center
+             (define nx (fl+ rx layer-cx))
+             (define ny (fl+ ry layer-cy))
+             (vector label nx ny)])]))
      (define (word-event w e)
-       (match e
+       (match (maybe-rotate e)
          [(vector 'down x y)
           (define target-m (find-object #f x y))
           (when target-m
@@ -302,6 +332,11 @@
              (max y-max ty-max)
              (cdr v))])))
 
+(define orientation/c
+  (one-of/c 'portrait 'landscape))
+(define (spriteboard-orient! sb n)
+  (set-spriteboard-orient! sb n))
+
 (provide
  (contract-out
   [meta-sprite?
@@ -346,6 +381,14 @@
          #:sprite meta-sprite-data/c)
         (#:alive? (-> boolean?))
         void?)]
+  [orientation/c contract?]
+  [spriteboard-orient
+   (-> spriteboard?
+       orientation/c)]
+  [spriteboard-orient!
+   (-> spriteboard?
+       orientation/c
+       void?)]
   [make-spriteboard
    (-> real? real? compiled-sprite-db? procedure? (-> spriteboard? void?)
        any/c)]))

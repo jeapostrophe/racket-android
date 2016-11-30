@@ -19,19 +19,12 @@
   (define text-render (make-text-renderer the-font csd))
 
   (define (initialize! sb)
-    (define (make-a-fish! x y)
-      (define fish-spin? #f)
+    (define (make-a-std-fish! x y m action)
+      (define fish-spin?-box (box #f))
       (spriteboard-clickable!
        sb
        #:click!
-       (λ ()
-         (play-sound! #"sample.m4a")
-         (play-sound! #"sample.m4a")
-         (cond
-           [fish-spin?
-            (set! fish-spin? #f)]
-           [else
-            (set! fish-spin? (current-milliseconds))]))
+       (λ () (action fish-spin?-box))
        #:drag-drop!
        (λ (v)
          (printf "Chomp chomp! ~v\n" v))
@@ -39,18 +32,38 @@
        (λ ()
          (sprite x y
                  (sprite-idx csd 'fish)
-                 #:m 4.0
+                 #:m m
                  #:theta
-                 (if fish-spin?
+                 (if (unbox fish-spin?-box)
                    (fl* (fl/
                          (fx->fl
                           (fxmodulo (fxquotient
-                                     (- (current-milliseconds) fish-spin?)
+                                     (- (current-milliseconds)
+                                        (unbox fish-spin?-box))
                                      10)
                                     360))
                          360.0)
                         (fl* 2.0 pi))
                    0.0)))))
+    (define (make-a-weird-fish! x y)
+      (make-a-std-fish!
+       x y 3.0
+       (λ (_)
+         (spriteboard-orient! sb
+                              (match (spriteboard-orient sb)
+                                ['portrait 'landscape]
+                                ['landscape 'portrait])))))
+    (define (make-a-fish! x y)
+      (make-a-std-fish!
+       x y 4.0
+       (λ (fish-spin?-box)
+         (play-sound! #"sample.m4a")
+         (play-sound! #"sample.m4a")
+         (cond
+           [(unbox fish-spin?-box)
+            (set-box! fish-spin?-box #f)]
+           [else
+            (set-box! fish-spin?-box (current-milliseconds))]))))
     (define (make-a-dragger! i x y)
       (define dropped? #f)
       (define idx (sprite-idx csd i))
@@ -91,6 +104,8 @@
            make-a-cloud!]
           [(and (= x 3) (= y 3))
            make-a-jack!]
+          [(and (= x 2) (= y 3))
+           make-a-weird-fish!]
           [else
            make-a-fish!]))
       (maker! (fl* (fl/ (fl+ 0.5 (fx->fl x)) (fx->fl N)) (fx->fl W))
@@ -119,5 +134,6 @@
                      #:mx 10.0 #:my 10.0
                      #:r (if dragging? 0 255)
                      #:g (if dragging? 255 0)
-                     #:b 0))) ))
+                     #:b 0)))))
+  
   (make-spriteboard W H csd render initialize!))
