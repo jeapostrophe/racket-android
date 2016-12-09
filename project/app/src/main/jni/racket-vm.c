@@ -32,7 +32,9 @@ static int rvm_init(void *d) {
 
   pipe(main_t_fd);
 
+  ALOGE("RC: Declaring modules...");
   declare_modules(e);
+  ALOGE("RC: Done declaring modules...");
 
   mp = scheme_make_null();
   v = scheme_intern_symbol("app");
@@ -40,13 +42,17 @@ static int rvm_init(void *d) {
   v = scheme_intern_symbol("quote");
   mp = scheme_make_pair(v, mp);
 
+  ALOGE("RC: Requiring modules...");
   v = scheme_namespace_require(mp);
+  ALOGE("RC: Done requiring modules...");
 
   a[0] = mp;
   a[1] = scheme_intern_symbol("run-app");
   a[2] = NULL;
+  ALOGE("RC: Resolving run-app");
   ra = scheme_dynamic_require(2, a);
-
+  ALOGE("RC: Done resolving run-app");
+  
   v = scheme_intern_symbol("main-t-in");
   a[0] = scheme_make_fd_input_port(main_t_fd[0], v, 0, 0);
   a[1] = scheme_make_integer(sizeof(struct rvm_api_t));
@@ -59,7 +65,9 @@ static int rvm_init(void *d) {
   SCHEME_VEC_ELS(vec)[1] = v;
   v = scheme_make_prim_w_arity(rap_draw_frame_done, "RAPDrawFrameDone", 0, 0);
   SCHEME_VEC_ELS(vec)[2] = v;
+  ALOGE("RC: Applying run-app");
   v = scheme_apply(ra, 3, a);
+  ALOGE("RC: Done applying run-app");
   
   return 0;
 }

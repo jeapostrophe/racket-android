@@ -118,7 +118,9 @@ void *rvm_thread_init(void *d) {
   scheme_console_output = rap_scheme_console_output;
   scheme_exit = rap_scheme_exit;
   scheme_make_stdout = rap_scheme_make_stdout;
-  scheme_make_stderr = rap_scheme_make_stderr;
+  scheme_make_stderr = rap_scheme_make_stdout;
+
+  scheme_set_logging(SCHEME_LOG_DEBUG, SCHEME_LOG_DEBUG);
 
   scheme_main_stack_setup(1, rvm_init, d);
 

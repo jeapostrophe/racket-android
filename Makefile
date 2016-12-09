@@ -40,7 +40,8 @@ clean:
 	rm -f ${RACKETDEST}/racket_app.c ${RACKETDEST}/racket-vm.3m.c
 
 size: ${RACKETDEST}/racket_app.c
-	du -hac $^
+	du -hac $^ ./project/app/build/outputs/apk/app-arm-debug.apk
+	tail $^
 
 rkt/csd.rktd.gz: rkt/app-csd.rkt
 	racket -t $^

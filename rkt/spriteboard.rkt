@@ -304,6 +304,7 @@
        (spriteboard-gc! the-sb)
        w)
      (define (word-tick w)
+       (collect-garbage 'incremental)
        w)])
   (initialize! the-sb)
   (app))
