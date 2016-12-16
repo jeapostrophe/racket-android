@@ -120,7 +120,7 @@ void *rvm_thread_init(void *d) {
   scheme_make_stdout = rap_scheme_make_stdout;
   scheme_make_stderr = rap_scheme_make_stdout;
 
-  scheme_set_logging(SCHEME_LOG_DEBUG, SCHEME_LOG_DEBUG);
+  //scheme_set_logging(SCHEME_LOG_DEBUG, SCHEME_LOG_DEBUG);
 
   scheme_main_stack_setup(1, rvm_init, d);
 
