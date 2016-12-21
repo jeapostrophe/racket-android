@@ -15,7 +15,7 @@
 
 (set-gl-procedure-loader!
  (load-get-proc-address (ffi-lib #f) '()))
-(gl-backend-version 'es3.2)
+(gl-backend-version 'es3.1)
 
 (struct touch-chaos (event-ch video-b label!)
   #:methods gen:chaos

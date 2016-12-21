@@ -37,7 +37,7 @@
        (λ (#:play-sound! local-play-sound!)
          (define W W-v)
          (define H H-v)
-         (define local-render (stage-draw/dc csd W H))
+         (define local-render (stage-draw/dc csd W H 4))
          (syntax-parameterize
              ([play-sound! (make-rename-transformer #'local-play-sound!)]
               [render (make-rename-transformer #'local-render)])

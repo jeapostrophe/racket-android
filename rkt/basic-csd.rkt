@@ -24,6 +24,6 @@
   (require racket/runtime-path
            racket/file)
   (define-runtime-path here ".")
-  (save-csd! static-csd here)
+  (save-csd! static-csd here #:debug? #t)
   (write-to-file f (build-path here "csd-font.rktd")
                  #:exists 'replace))

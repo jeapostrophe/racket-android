@@ -7,7 +7,7 @@
          mode-lambda/text/runtime
          lux
          "spriteboard.rkt"
-         "pixel-c.rkt"
+         "devices.rkt"
 
          ;; Require this to build on the tablet
          "tablet.rkt"
@@ -33,6 +33,7 @@
          (sprite x y
                  (sprite-idx csd 'fish)
                  #:m m
+                 #:layer 0
                  #:theta
                  (if (unbox fish-spin?-box)
                    (fl* (fl/
@@ -74,6 +75,7 @@
        #:sprite
        (λ (dragging? x y)
          (sprite x y idx
+                 #:layer 1
                  #:m 4.0))
        #:drag-start!
        (λ () (printf "Drag start!\n"))
@@ -130,7 +132,7 @@
         csd
         (text-render "Drag Me"
                      x y
-                     #:layer 2
+                     #:layer 3
                      #:mx 10.0 #:my 10.0
                      #:r (if dragging? 0 255)
                      #:g (if dragging? 255 0)

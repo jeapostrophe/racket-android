@@ -255,7 +255,7 @@
                   ['landscape 0.0]
                   ['portrait portrait-theta])))
        (define layer-c
-         (make-vector 8 std-layer))
+         (make-vector 4 std-layer))
        (render layer-c '() (spriteboard-tree dragged-m the-sb)))
 
      (define (maybe-rotate e)

@@ -52,6 +52,7 @@ class RAPView extends GLSurfaceView {
         setEGLConfigChooser(8, 8, 8, 0, 16, 0);
         setEGLContextClientVersion(3);
         setRenderer(new Renderer());
+        setRenderMode(RENDERMODE_CONTINUOUSLY);
     }
 
     private static class Renderer implements GLSurfaceView.Renderer {
@@ -190,6 +191,7 @@ public class RacketAndroidProject extends Activity {
         RLib.onCreate( new RAPAudio(getApplication()) );
         mView = new RAPView(getApplication());
         mView.setOnTouchListener(new RAPListener());
+        mView.requestRender();
         setContentView(mView);
     }
 
