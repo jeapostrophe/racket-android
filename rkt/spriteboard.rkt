@@ -336,6 +336,7 @@
 (define orientation/c
   (one-of/c 'portrait 'landscape))
 (define (spriteboard-orient! sb n)
+  (eprintf "sb orient is now ~v\n" n)
   (set-spriteboard-orient! sb n))
 
 (provide

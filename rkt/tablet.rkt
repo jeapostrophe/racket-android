@@ -156,7 +156,8 @@
             (make-make-receive-rpc!
              #:make-app
              (do-make-app . make-app-args))))
-         (provide run-app)))]))
+         (provide run-app)
+         (module+ main)))]))
 
 (provide define-app
          define-static-font
