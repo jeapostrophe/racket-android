@@ -30,6 +30,7 @@ app: build_all
 
 .PHONY: simulate
 simulate: rkt/csd.rktd.gz
+	ln -sf simulator.rkt rkt/tabulator.rkt
 	raco make rkt/app.rkt
 	racket -t rkt/app.rkt
 
@@ -37,6 +38,8 @@ simulate: rkt/csd.rktd.gz
 build_all: ${RACKETDEST} ${RACKETDEST}/racket-vm.3m.c ${RACKETDEST}/racket_app.c ${RACKETDEST}/libracket3m.a ${RACKETDEST}/include
 
 clean:
+	find rkt -name compiled | xargs rm -fr
+	find rkt/xprize/ -name compiled | xargs rm -fr
 	rm -f ${RACKETDEST}/racket_app.c ${RACKETDEST}/racket-vm.3m.c
 
 size: ${RACKETDEST}/racket_app.c
@@ -47,6 +50,7 @@ rkt/csd.rktd.gz: rkt/app-csd.rkt
 	racket -t $^
 
 ${RACKETDEST}/racket_app.c: rkt/app.rkt rkt/csd.rktd.gz ${RACKETDEST}
+	ln -sf tablet.rkt rkt/tabulator.rkt
 	raco ctool --c-mods $@ $<
 
 ${RACKETDEST}/racket-vm.3m.c: ${RACKETDEST}/../racket-vm.c ${RACKETDEST}
