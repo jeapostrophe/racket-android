@@ -218,8 +218,6 @@
 
 (define (make-spriteboard W H csd render initialize!)  
   (define the-sb (make-the-spriteboard))
-  (define dragged-m #f)
-
   (define (find-object not-o x y)
     (define m->t (spriteboard-meta->tree the-sb))
     (define cs
@@ -237,6 +235,18 @@
                     (sprite-layer (car t*m)))
                   cs)
          (cons #f #f))))
+
+  (define drag-state #f)
+  (define (drag-adjust-pos init-x drag-x x)
+    (+ init-x (- x drag-x)))
+  (define (drag-state-update-draggable! x y)
+    (match-define (vector dragged-m init-x init-y drag-x drag-y) drag-state)
+
+    (define nx (drag-adjust-pos init-x drag-x x))
+    (define ny (drag-adjust-pos init-y drag-y y))
+    
+    (drag-update-pos! dragged-m nx ny)
+    dragged-m)
 
   (struct app ()
     #:methods gen:word
@@ -256,7 +266,10 @@
                   ['portrait portrait-theta])))
        (define layer-c
          (make-vector 4 std-layer))
-       (render layer-c '() (spriteboard-tree dragged-m the-sb)))
+       (render layer-c '()
+               (spriteboard-tree
+                (and drag-state (vector-ref drag-state 0))
+                the-sb)))
 
      (define (maybe-rotate e)
        (match (spriteboard-orient the-sb)
@@ -286,21 +299,27 @@
               [(clickable? target-m)
                (click-click! target-m)]
               [(draggable? target-m)
-               (set! dragged-m target-m)
-               (drag-update-pos! dragged-m x y)
-               (drag-start! dragged-m)]))]
+               (set! drag-state
+                     (vector target-m
+                             (draggable-x target-m) (draggable-y target-m)
+                             x y))
+               (drag-state-update-draggable! x y)
+               (drag-start! target-m)]))]
          [(vector 'drag x y)
-          (when dragged-m
-            (drag-update-pos! dragged-m x y))]
+          (when drag-state
+            (drag-state-update-draggable! x y))]
          [(vector 'up x y)
-          (when dragged-m
-            (drag-update-pos! dragged-m x y)
+          (when drag-state
+            (define dragged-m
+              (drag-state-update-draggable! x y))
             (define target-m
-              (find-object dragged-m x y))
+              (find-object dragged-m
+                           (draggable-x dragged-m)
+                           (draggable-y dragged-m)))
             (when target-m
               (object-drop! target-m (drag-value dragged-m)))
             (drag-stop! dragged-m)
-            (set! dragged-m #f))])
+            (set! drag-state #f))])
        (spriteboard-gc! the-sb)
        w)
      (define (word-tick w)
