@@ -70,8 +70,10 @@
        ((unbox video-b) current-w current-h the-fake-dc)
        (platform-draw-frame-done! platform)]
       [(vector 'onSurfaceChanged w h)
+       (eprintf "onSurfaceChanged ~a ~a\n" w h)
        (set! current-w w)
-       (set! current-h h)]
+       (set! current-h h)
+       (async-channel-put event-ch (vector 'resize w h))]
       ['onSurfaceCreated
        (set! the-fake-dc (make-fake-dc))]
       [(vector 'onTouchEvent 0 x y)

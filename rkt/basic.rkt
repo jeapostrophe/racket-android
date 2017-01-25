@@ -14,7 +14,7 @@
          ;; Require this to use the simulator
          "tabulator.rkt")
 
-(define-app ([W PIXEL-W] [H PIXEL-H])
+(define-app ([W (* 2 PIXEL-W)] [H (* 2 PIXEL-H)])
   (define-static-font the-font "csd-font.rktd")
   (define text-render (make-text-renderer the-font csd))
 

@@ -6,6 +6,8 @@
          racket/contract/base
          racket/list
          mode-lambda
+         (only-in mode-lambda/backend/lib
+                  compute-nice-scale)
          lux)
 
 (define (flsqr x)
@@ -271,12 +273,26 @@
                 (and drag-state (vector-ref drag-state 0))
                 the-sb)))
 
+     (define scale 1.0)
+     (define inset-left 0.0)
+     (define inset-bot 0.0)
+     (define (scale-click e)
+       (match e
+         [(vector 'resize _ _)
+          e]
+         [(vector label x y)            
+          (vector label
+                  (fl/ (fl- x inset-left) scale)
+                  (fl/ (fl- y inset-bot) scale))]))
+     
      (define (maybe-rotate e)
        (match (spriteboard-orient the-sb)
          ['landscape
           e]
          ['portrait
           (match e
+            [(vector 'resize _ _)
+             e]
             [(vector label ox oy)
              ;; Translate to origin
              (define x (fl- ox layer-cx))
@@ -291,7 +307,15 @@
              (define ny (fl+ ry layer-cy))
              (vector label nx ny)])]))
      (define (word-event w e)
-       (match (maybe-rotate e)
+       (match (maybe-rotate (scale-click e))
+         [(vector 'resize w h)
+          (define act-W w)
+          (define act-H h)
+          (define sim-W W)
+          (define sim-H H)
+          (set! scale (compute-nice-scale 1.0 act-W sim-W act-H sim-H))
+          (set! inset-left (fl/ (fl- (fx->fl act-W) (fl* scale (fx->fl sim-W))) 2.0))
+          (set! inset-bot (fl/ (fl- (fx->fl act-H) (fl* scale (fx->fl sim-H))) 2.0))]
          [(vector 'down x y)
           (define target-m (find-object #f x y))
           (when target-m

@@ -59,9 +59,6 @@
 (define (make-simulator sim-W sim-H the-gui)
   (define mouse-event%? (is-a?/c mouse-event%))
   (define event-ch (make-async-channel))
-  (define scale 1.0)
-  (define inset-left 0.0)
-  (define inset-bot 0.0)
   (define event-t
     (thread
      (λ ()
@@ -69,9 +66,7 @@
        (let loop ()
          (match (sync from-ch)
            [(list 'resize act-W act-H)
-            (set! scale (compute-nice-scale 1.0 act-W sim-W act-H sim-H))
-            (set! inset-left (fl/ (fl- (fx->fl act-W) (fl* scale (fx->fl sim-W))) 2.0))
-            (set! inset-bot (fl/ (fl- (fx->fl act-H) (fl* scale (fx->fl sim-H))) 2.0))]
+            (async-channel-put event-ch (vector 'resize act-W act-H))]
            [(? mouse-event%? me)
             (define type
               (cond
@@ -85,13 +80,7 @@
                  #f]))
             (when type
               (define ne
-                (vector type
-                        (fl/ (fl- (fx->fl (send me get-x))
-                                  inset-left)
-                             scale)
-                        (fl/ (fl- (fx->fl (send me get-y))
-                                  inset-bot)
-                             scale)))
+                (vector type (fx->fl (send me get-x)) (fx->fl (send me get-y))))
               (async-channel-put event-ch ne))]
            [_
             (void)])
