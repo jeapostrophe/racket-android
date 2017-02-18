@@ -92,18 +92,22 @@
     [(? backgroundable?)
      ((backgroundable-alive? o))]))
 
-(struct spriteboard (orient metatree meta->tree) #:mutable)
+(struct spriteboard (ignoring? orient metatree meta->tree) #:mutable)
 (define (make-the-spriteboard)
-  (spriteboard 'landscape null (make-hasheq)))
+  (spriteboard #f 'landscape null (make-hasheq)))
+
+(define (spriteboard-ignore! sb i)
+  (set-spriteboard-ignoring?! sb i))
+
 (define (spriteboard-tree dragged-m sb)
-  (match-define (spriteboard ot mt m->t) sb)
+  (match-define (spriteboard _ ot mt m->t) sb)
   (hash-clear! m->t)
   (for/list ([m (in-list mt)])
     (define t (object-spr (eq? dragged-m m) m))
     (hash-set! m->t m t)
     t))
 (define (spriteboard-gc! sb)
-  (match-define (spriteboard ot mt m->t) sb)
+  (match-define (spriteboard _ ot mt m->t) sb)
   (set-spriteboard-metatree!
    sb
    (for/fold ([mt null])
@@ -113,7 +117,7 @@
        mt))))
 
 (define (spriteboard-clear! sb)
-  (match-define (spriteboard ot mt m->t) sb)
+  (match-define (spriteboard _ ot mt m->t) sb)
   (spriteboard-orient! sb 'landscape)
   (hash-clear! m->t)
   (set-spriteboard-metatree! sb '()))
@@ -218,7 +222,7 @@
   (and (pair? l)
        (argmax f l)))
 
-(define (make-spriteboard W H csd render initialize!)  
+(define (make-spriteboard W H csd render initialize!)
   (define the-sb (make-the-spriteboard))
   (define (find-object not-o x y)
     (define m->t (spriteboard-meta->tree the-sb))
@@ -246,7 +250,7 @@
 
     (define nx (drag-adjust-pos init-x drag-x x))
     (define ny (drag-adjust-pos init-y drag-y y))
-    
+
     (drag-update-pos! dragged-m nx ny)
     dragged-m)
 
@@ -280,11 +284,11 @@
        (match e
          [(vector 'resize _ _)
           e]
-         [(vector label x y)            
+         [(vector label x y)
           (vector label
                   (fl/ (fl- x inset-left) scale)
                   (fl/ (fl- y inset-bot) scale))]))
-     
+
      (define (maybe-rotate e)
        (match (spriteboard-orient the-sb)
          ['landscape
@@ -307,44 +311,45 @@
              (define ny (fl+ ry layer-cy))
              (vector label nx ny)])]))
      (define (word-event w e)
-       (match (maybe-rotate (scale-click e))
-         [(vector 'resize w h)
-          (define act-W w)
-          (define act-H h)
-          (define sim-W W)
-          (define sim-H H)
-          (set! scale (compute-nice-scale 1.0 act-W sim-W act-H sim-H))
-          (set! inset-left (fl/ (fl- (fx->fl act-W) (fl* scale (fx->fl sim-W))) 2.0))
-          (set! inset-bot (fl/ (fl- (fx->fl act-H) (fl* scale (fx->fl sim-H))) 2.0))]
-         [(vector 'down x y)
-          (define target-m (find-object #f x y))
-          (when target-m
-            (cond
-              [(clickable? target-m)
-               (click-click! target-m)]
-              [(draggable? target-m)
-               (set! drag-state
-                     (vector target-m
-                             (draggable-x target-m) (draggable-y target-m)
-                             x y))
-               (drag-state-update-draggable! x y)
-               (drag-start! target-m)]))]
-         [(vector 'drag x y)
-          (when drag-state
-            (drag-state-update-draggable! x y))]
-         [(vector 'up x y)
-          (when drag-state
-            (define dragged-m
-              (drag-state-update-draggable! x y))
-            (define target-m
-              (find-object dragged-m
-                           (draggable-x dragged-m)
-                           (draggable-y dragged-m)))
+       (unless (spriteboard-ignoring? the-sb)
+         (match (maybe-rotate (scale-click e))
+           [(vector 'resize w h)
+            (define act-W w)
+            (define act-H h)
+            (define sim-W W)
+            (define sim-H H)
+            (set! scale (compute-nice-scale 1.0 act-W sim-W act-H sim-H))
+            (set! inset-left (fl/ (fl- (fx->fl act-W) (fl* scale (fx->fl sim-W))) 2.0))
+            (set! inset-bot (fl/ (fl- (fx->fl act-H) (fl* scale (fx->fl sim-H))) 2.0))]
+           [(vector 'down x y)
+            (define target-m (find-object #f x y))
             (when target-m
-              (object-drop! target-m (drag-value dragged-m)))
-            (drag-stop! dragged-m)
-            (set! drag-state #f))])
-       (spriteboard-gc! the-sb)
+              (cond
+                [(clickable? target-m)
+                 (click-click! target-m)]
+                [(draggable? target-m)
+                 (set! drag-state
+                       (vector target-m
+                               (draggable-x target-m) (draggable-y target-m)
+                               x y))
+                 (drag-state-update-draggable! x y)
+                 (drag-start! target-m)]))]
+           [(vector 'drag x y)
+            (when drag-state
+              (drag-state-update-draggable! x y))]
+           [(vector 'up x y)
+            (when drag-state
+              (define dragged-m
+                (drag-state-update-draggable! x y))
+              (define target-m
+                (find-object dragged-m
+                             (draggable-x dragged-m)
+                             (draggable-y dragged-m)))
+              (when target-m
+                (object-drop! target-m (drag-value dragged-m)))
+              (drag-stop! dragged-m)
+              (set! drag-state #f))])
+         (spriteboard-gc! the-sb))
        w)
      (define (word-tick w)
        (collect-garbage 'incremental)
@@ -382,7 +387,15 @@
   (eprintf "sb orient is now ~v\n" n)
   (set-spriteboard-orient! sb n))
 
+(define-syntax-rule (with-spriteboard-ignore sb . body)
+  (let ([sb-i sb])
+    (dynamic-wind
+      (λ () (spriteboard-ignore! sb #t))
+      (λ () . body)
+      (λ () (spriteboard-ignore! sb #f)))))
+
 (provide
+ with-spriteboard-ignore
  (contract-out
   [meta-sprite?
    (-> any/c
@@ -394,6 +407,9 @@
   [meta-sprite*
    (-> compiled-sprite-db? any/c
        meta-sprite?)]
+  [spriteboard-ignore!
+   (-> spriteboard? boolean?
+       void?)]
   [spriteboard-clear!
    (-> spriteboard?
        void?)]

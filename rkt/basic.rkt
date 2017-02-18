@@ -54,6 +54,15 @@
                               (match (spriteboard-orient sb)
                                 ['portrait 'landscape]
                                 ['landscape 'portrait])))))
+    (define (make-an-odd-fish! x y)
+      (make-a-std-fish!
+       x y 3.0
+       (λ (_)
+         (with-spriteboard-ignore sb
+           (play-sound! #"sample.m4a")
+           (sleep 3)
+           (play-sound! #"sample.m4a"))
+         (void))))
     (define (make-a-fish! x y)
       (make-a-std-fish!
        x y 4.0
@@ -108,6 +117,8 @@
            make-a-jack!]
           [(and (= x 2) (= y 3))
            make-a-weird-fish!]
+          [(and (= x 4) (= y 3))
+           make-an-odd-fish!]
           [else
            make-a-fish!]))
       (maker! (fl* (fl/ (fl+ 0.5 (fx->fl x)) (fx->fl N)) (fx->fl W))
