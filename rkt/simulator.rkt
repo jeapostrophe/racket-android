@@ -39,10 +39,10 @@
 (define-runtime-path drive-path "../etc/drive")
 (define (sim-drive-read p)
   (with-handlers ([exn:fail? (λ (x) #f)])
-    (file->bytes (build-path drive-path p))))
+    (file->bytes (build-path drive-path (bytes->string/utf-8 p)))))
 (define (sim-drive-write! p c)
   (with-handlers ([exn:fail? (λ (x) #f)])
-    (display-to-file c (build-path drive-path p) #:exists 'replace)
+    (display-to-file c (build-path drive-path (bytes->string/utf-8 p)) #:exists 'replace)
     #t))
 
 (struct simulator (event-ch inner-chaos)
