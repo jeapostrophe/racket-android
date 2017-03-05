@@ -7,6 +7,7 @@
          racket/fixnum
          racket/generic
          racket/async-channel
+         racket/file
          lux
          lux/chaos
          lux/chaos/gui
@@ -34,6 +35,15 @@
     s))
 
 (gl-backend-version '3.3)
+
+(define-runtime-path drive-path "../etc/drive")
+(define (sim-drive-read p)
+  (with-handlers ([exn:fail? (λ (x) #f)])
+    (file->bytes (build-path drive-path p))))
+(define (sim-drive-write! p c)
+  (with-handlers ([exn:fail? (λ (x) #f)])
+    (display-to-file c (build-path drive-path p) #:exists 'replace)
+    #t))
 
 (struct simulator (event-ch inner-chaos)
   #:methods gen:chaos
@@ -101,10 +111,14 @@
             (λ ()
               (fiat-lux
                (make-app
-                #:play-sound! (make-racket/gui-play-sound!))))))))]))
+                #:play-sound! (make-racket/gui-play-sound!)
+                #:drive-read sim-drive-read
+                #:drive-write! sim-drive-write!)))))))]))
 
 (provide define-app
          define-static-font
          csd
          play-sound!
+         drive-read
+         drive-write!
          render)

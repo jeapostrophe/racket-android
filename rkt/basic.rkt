@@ -18,6 +18,24 @@
   (define-static-font the-font "csd-font.rktd")
   (define text-render (make-text-renderer the-font csd))
 
+  (define start-count-file #"basic-start-count.rktd")
+  (define start-count
+    (match (drive-read start-count-file)
+      [#f
+       (printf "Failed to read\n")
+       0]
+      [s
+       (printf "Read: ~v\n" s)
+       (or (string->number (bytes->string/utf-8 s))
+           0)]))
+  (define next-count-bs
+    (string->bytes/utf-8
+     (number->string
+      (add1 start-count))))
+  (printf "Writing: ~v\n" next-count-bs)
+  (unless (drive-write! start-count-file next-count-bs)
+    (printf "Failed to write\n"))
+
   (define (initialize! sb)
     (define (make-a-std-fish! x y m action)
       (define fish-spin?-box (box #f))
@@ -127,7 +145,7 @@
     (spriteboard-clickable!
      sb
      #:sprite (meta-sprite (list 0.0 0.0 0.0 0.0)
-                           (text-render "Text!"
+                           (text-render (format "Started ~a times" start-count)
                                         (fl/ (fx->fl W) 2.0) (fl/ (fx->fl H) 4.0)
                                         #:layer 2
                                         #:mx 10.0 #:my 10.0

@@ -14,11 +14,12 @@ model {
     android {
         compileSdkVersion = 23
         buildToolsVersion = '23.0.2'
-        
+
         defaultConfig {
             applicationId = 'org.racketlang.android.project'
-            minSdkVersion.apiLevel = 4
+            minSdkVersion.apiLevel = 21
             targetSdkVersion.apiLevel = 23
+            multiDexEnabled true
         }
 
         sources {
@@ -41,7 +42,7 @@ model {
             moduleName = 'racket-android-project'
             toolchain = 'clang'
             CFlags.addAll(['-Wall'])
-            ldLibs.addAll(['log','GLESv3', 'EGL'])
+            ldLibs.addAll(['log', 'GLESv3', 'EGL'])
         }
         productFlavors {
             create("arm") {
@@ -49,4 +50,9 @@ model {
             }
         }
     }
+}
+dependencies {
+    compile 'com.android.support:multidex:1.0.1'
+    compile 'com.google.firebase:firebase-messaging:9.4.0'
+    compile 'com.google.android.gms:play-services:9.4.0'
 }

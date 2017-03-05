@@ -57,7 +57,7 @@ static int rvm_init(void *d) {
   a[0] = scheme_make_fd_input_port(main_t_fd[0], v, 0, 0);
   a[1] = scheme_make_integer(sizeof(struct rvm_api_t));
   v = scheme_make_null();
-  vec = scheme_make_vector(3, v);
+  vec = scheme_make_vector(5, v);
   a[2] = vec;
   v = scheme_make_prim_w_arity(rap_audio, "RAPAudio.playSound", 1, 1);
   SCHEME_VEC_ELS(vec)[0] = v;
@@ -65,6 +65,10 @@ static int rvm_init(void *d) {
   SCHEME_VEC_ELS(vec)[1] = v;
   v = scheme_make_prim_w_arity(rap_draw_frame_done, "RAPDrawFrameDone", 0, 0);
   SCHEME_VEC_ELS(vec)[2] = v;
+  v = scheme_make_prim_w_arity(rap_drive_read, "RAPDrive.read", 1, 1);
+  SCHEME_VEC_ELS(vec)[3] = v;
+  v = scheme_make_prim_w_arity(rap_drive_write, "RAPDrive.write", 2, 2);
+  SCHEME_VEC_ELS(vec)[4] = v;
   ALOGE("RC: Applying run-app");
   v = scheme_apply(ra, 3, a);
   ALOGE("RC: Done applying run-app");

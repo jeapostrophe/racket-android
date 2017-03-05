@@ -36,6 +36,10 @@
   ((vector-ref pl 1) l))
 (define (platform-draw-frame-done! pl)
   ((vector-ref pl 2)))
+(define (platform-drive-read pl p)
+  ((vector-ref pl 3) p))
+(define (platform-drive-write! pl p c)
+  ((vector-ref pl 4) p c))
 
 (define (make-touch #:platform platform)
   (define video-b (box void))
@@ -87,6 +91,10 @@
        (when s
          (semaphore-post s)
          (hash-remove! sound->sema id))]
+      [(vector 'setDriveStatus m)
+       (eprintf "setDriveStatus ~a\n" m)
+       (set-drive-status?! (zero? m))
+       (void)]
       [x
        (void)]))
 
@@ -96,15 +104,47 @@
     (define id (platform-play-sound! platform p))
     (hash-set! sound->sema id s)
     s)
+
+  (define drive-status?-ch (make-channel))
+  (define drive-status!-ch (make-channel))
+  (define (get-drive-status?)
+    (define reply-ch (make-channel))
+    (channel-put drive-status?-ch reply-ch)
+    (channel-get reply-ch))
+  (define (set-drive-status?! v)
+    (channel-put drive-status!-ch v))
+  (define drive-status?-t
+    (thread
+     (λ ()
+       (let loop ([status? (channel-get drive-status!-ch)])
+         (sync
+          (handle-evt drive-status!-ch loop)
+          (handle-evt drive-status?-ch
+                      (λ (reply-ch)
+                        (channel-put reply-ch status?)
+                        (loop status?))))))))
+  
+  (define (drive-read p)
+    (and (get-drive-status?)
+         (platform-drive-read platform p)))
+  (define (drive-write! p c)
+    (and (get-drive-status?)
+         (platform-drive-write! platform p c)))
   
   (values (touch-chaos event-ch video-b label!)
           receive-rpc!
-          play-sound!))
+          play-sound!
+          drive-read
+          drive-write!))
 
 (define ((make-make-receive-rpc!
           #:make-app make-app)
          #:platform platform)
-  (define-values (touch-chaos touch-rpc! touch-play-sound!)
+  (define-values (touch-chaos
+                  touch-rpc!
+                  touch-play-sound!
+                  touch-drive-read
+                  touch-drive-write!)
     (make-touch #:platform platform))
   (define app-t
     (thread
@@ -115,7 +155,11 @@
           (fiat-lux
            (make-app
             #:play-sound!
-            touch-play-sound!)))))))
+            touch-play-sound!
+            #:drive-read
+            touch-drive-read
+            #:drive-write!
+            touch-drive-write!)))))))
   touch-rpc!)
 
 (define (ib->i b s)
@@ -134,7 +178,9 @@
     [3
      (vector 'onTouchEvent (ib->i b 4) (fb->r b 8) (fb->r b 12))]
     [4
-     (vector 'soundComplete (ib->i b 4))]))
+     (vector 'soundComplete (ib->i b 4))]
+    [5
+     (vector 'setDriveStatus (ib->i b 4))]))
 
 (define ((make-run-app make-rpc!) in rpc-size platform)
   (printf "RPC Stream initializing\n")
@@ -165,4 +211,6 @@
          define-static-font
          csd
          play-sound!
+         drive-read
+         drive-write!
          render)

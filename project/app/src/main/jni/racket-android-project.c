@@ -62,6 +62,7 @@ int main_t_fd[2];
 #define RAP_onSurfaceCreated 2
 #define RAP_onTouchEvent 3
 #define RAP_soundComplete 4
+#define RAP_setDriveStatus 5
 
 struct rvm_api_t {
   uint32_t call;
@@ -78,6 +79,7 @@ void send_to_racket( struct rvm_api_t rpc ) {
 
 JavaVM* the_JVM;
 jobject the_RAPAudio;
+jobject the_RAPDrive;
 
 Scheme_Object *rap_audio(int argc, Scheme_Object **argv) {
   JNIEnv *env = NULL;
@@ -91,6 +93,54 @@ Scheme_Object *rap_audio(int argc, Scheme_Object **argv) {
   (*the_JVM)->DetachCurrentThread(the_JVM);
 
   return scheme_make_integer( jid );
+}
+
+Scheme_Object *rap_drive_read(int argc, Scheme_Object **argv) {
+  JNIEnv *env = NULL;
+  (*the_JVM)->AttachCurrentThread(the_JVM, &env, NULL);
+  ALOGE("RAP_Drive_Read NewStringUTF, len = %d\n", SCHEME_BYTE_STRLEN_VAL(argv[0]));
+  jstring path = (*env)->NewStringUTF(env, SCHEME_BYTE_STR_VAL(argv[0]));
+  jclass cls = (*env)->GetObjectClass(env, the_RAPDrive);
+  jmethodID mid =
+    (*env)->GetStaticMethodID(env, cls, "read", "(Ljava/lang/String;)Ljava/lang/String;");
+  ALOGE("RAP_Drive_Read Calling, len = %d\n", (*env)->GetStringLength(env, path));
+  jstring contents = (jstring) (*env)->CallStaticObjectMethod(env, cls, mid, path);
+  Scheme_Object *rcontents = NULL;
+  ALOGE("RAP_Drive_Read Returned\n");
+
+  if ( contents == NULL ) {
+    rcontents = scheme_false;
+  } else {
+    ALOGE("RAP_Drive_Read Getting string\n");
+    const char *ccontents = (*env)->GetStringUTFChars(env, contents, JNI_FALSE);
+    rcontents = scheme_make_byte_string( ccontents );
+    (*env)->ReleaseStringUTFChars(env, contents, ccontents);
+  }
+  
+  (*the_JVM)->DetachCurrentThread(the_JVM);
+
+  return rcontents;
+}
+
+Scheme_Object *rap_drive_write(int argc, Scheme_Object **argv) {
+  JNIEnv *env = NULL;
+  (*the_JVM)->AttachCurrentThread(the_JVM, &env, NULL);
+  ALOGE("RAP_Drive_Write NewStringUTF path\n");
+  jstring path = (*env)->NewStringUTF(env, SCHEME_BYTE_STR_VAL(argv[0]));
+  ALOGE("RAP_Drive_Write NewStringUTF contents\n");
+  jstring contents = (*env)->NewStringUTF(env, SCHEME_BYTE_STR_VAL(argv[1]));
+  jclass cls = (*env)->GetObjectClass(env, the_RAPDrive);
+  jmethodID mid =
+    (*env)->GetStaticMethodID(env, cls, "write", "(Ljava/lang/String;Ljava/lang/String;)Z");
+  ALOGE("RAP_Drive_Write Calling\n");
+  jboolean jr = (*env)->CallStaticBooleanMethod(env, cls, mid, path, contents);
+  ALOGE("RAP_Drive_Write Returned\n");
+
+  Scheme_Object *r = jr == JNI_TRUE ? scheme_true : scheme_false;
+  
+  (*the_JVM)->DetachCurrentThread(the_JVM);
+
+  return r;
 }
 
 Scheme_Object *rap_set_label(int argc, Scheme_Object **argv) {
@@ -184,12 +234,24 @@ Java_org_racketlang_android_project_RLib_soundComplete(
 }
 
 void
+Java_org_racketlang_android_project_RLib_setDriveStatus(
+ JNIEnv* env,
+ jobject thiz,
+ jint m ) {
+  struct rvm_api_t rpc = { .call = RAP_setDriveStatus,
+                           .args = { {.i = m} } };
+  return send_to_racket( rpc );
+}
+
+void
 Java_org_racketlang_android_project_RLib_onCreate(
  JNIEnv* env,
  jobject thiz,
- jobject rs ) {
+ jobject rs,
+ jobject rd ) {
   (*env)->GetJavaVM(env, &the_JVM);
   the_RAPAudio = (*env)->NewGlobalRef(env, rs);
+  the_RAPDrive = (*env)->NewGlobalRef(env, rd);
   pthread_create(&main_t, NULL, rvm_thread_init, NULL);
   return;
 }
